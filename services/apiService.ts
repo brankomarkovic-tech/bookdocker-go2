@@ -91,17 +91,23 @@ export const createExpert = async (expertData: Omit<Expert, 'id' | 'createdAt' |
     }
   }
 
-  const dbExpertData = mapToDbExpert({
+  // First, map the expert data to snake_case, which strips out the ID.
+  const mappedData = mapToDbExpert({
       ...expertData,
-      id: crypto.randomUUID(), // This won't be sent, but good for consistency
       createdAt: new Date().toISOString(),
       isExample: false,
   });
 
+  // Then, generate a new ID and add it to the mapped object.
+  const dbExpertDataWithId = {
+      ...mappedData,
+      id: crypto.randomUUID(),
+  };
+
   try {
     const { data, error } = await supabase
       .from('experts')
-      .insert(dbExpertData)
+      .insert(dbExpertDataWithId)
       .select()
       .single();
 
@@ -115,9 +121,6 @@ export const createExpert = async (expertData: Omit<Expert, 'id' | 'createdAt' |
 
 export const updateExpert = async (expertId: string, profileData: Partial<Expert>): Promise<Expert> => {
     const supabaseAdmin = getAdminClient();
-    // FIX: Corrected a TypeScript error where `updated_at` was incorrectly added to a `Partial<Expert>` object.
-    // The fix involves first transforming the profile data to the database format (snake_case)
-    // and then adding the `updated_at` timestamp.
     const dbProfileData = {
         ...mapToDbExpert(profileData),
         updated_at: new Date().toISOString(),
