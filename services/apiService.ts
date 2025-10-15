@@ -1,116 +1,122 @@
+import { createClient } from '@supabase/supabase-js';
 import { Expert } from '../types';
-import { EXAMPLE_EXPERTS } from '../exampleData';
+import { supabase } from '../supabaseClient';
 
-const DB_KEY = 'bookdocker_experts';
-
-// FIX: Created a custom error class for handling duplicate email submissions.
 export class DuplicateEmailError extends Error {
-    constructor(message: string) {
-        super(message);
-        this.name = 'DuplicateEmailError';
-    }
+  constructor(message: string) {
+    super(message);
+    this.name = 'DuplicateEmailError';
+  }
 }
 
-// FIX: Implemented a mock database using localStorage for client-side persistence.
-const initializeDb = () => {
-    if (!localStorage.getItem(DB_KEY)) {
-        // We don't store the example experts in our "DB" as they are static.
-        localStorage.setItem(DB_KEY, JSON.stringify([]));
+// TODO: The admin client requires a secret key and must be moved to a secure backend function (e.g., Supabase Edge Function).
+// For now, this is disabled to allow the frontend to deploy without exposing secrets.
+const getAdminClient = () => {
+    console.error("Admin client is disabled in the production frontend for security reasons.");
+    // Returning the public client to prevent crashes, but admin actions will fail RLS.
+    return supabase;
+};
+
+const formatSupabaseError = (error: any): string => {
+    if (!error) return "An unknown error occurred.";
+    return `Database error: ${error.message} (Code: ${error.code})`;
+}
+
+export const getExperts = async (signal?: AbortSignal): Promise<Expert[]> => {
+  try {
+    const query = supabase.from('experts').select('*');
+    if (signal) {
+        query.abortSignal(signal);
     }
+    const { data, error } = await query;
+
+    if (error) throw error;
+    // The data from Supabase is already in the correct camelCase format if columns are named correctly.
+    // Assuming the data is clean for now.
+    return (data || []) as Expert[];
+  } catch (error) {
+    console.error("Supabase error in getExperts:", error);
+    throw new Error(formatSupabaseError(error));
+  }
 };
 
-initializeDb();
+export const createExpert = async (expertData: Omit<Expert, 'id' | 'createdAt' | 'isExample' | 'updatedAt'>): Promise<Expert> => {
+  try {
+    const { data: existing } = await supabase
+      .from('experts')
+      .select('id')
+      .eq('email', expertData.email)
+      .single();
 
-// Helper to get all "real" experts from localStorage
-const getDbExperts = (): Expert[] => {
-    const dbData = localStorage.getItem(DB_KEY);
-    return dbData ? JSON.parse(dbData) : [];
-};
-
-// Helper to save experts to localStorage
-const saveDbExperts = (experts: Expert[]) => {
-    localStorage.setItem(DB_KEY, JSON.stringify(experts));
-};
-
-
-// --- API Functions ---
-
-/**
- * Fetches all "real" experts from the database (localStorage).
- * Example experts are added separately in the AppContext.
- */
-export const getExperts = async (): Promise<Expert[]> => {
-    console.log("API: Fetching experts from localStorage.");
-    // Simulate network delay
-    await new Promise(res => setTimeout(res, 300));
-    return getDbExperts();
-};
-
-/**
- * Creates a new expert and saves it to the database.
- */
-export const createExpert = async (expertData: Omit<Expert, 'id' | 'createdAt' | 'updatedAt' | 'isExample'>): Promise<Expert> => {
-    console.log("API: Creating new expert.", expertData);
-    await new Promise(res => setTimeout(res, 500));
-    
-    const dbExperts = getDbExperts();
-    
-    // Check for duplicate email
-    if (dbExperts.some(e => e.email.toLowerCase() === expertData.email.toLowerCase()) || EXAMPLE_EXPERTS.some(e => e.email.toLowerCase() === expertData.email.toLowerCase())) {
-        throw new DuplicateEmailError(`An expert with email ${expertData.email} already exists.`);
+    if (existing) {
+      throw new DuplicateEmailError('An expert with this email address already exists.');
     }
+  } catch (error: any) {
+    if (error.code !== 'PGRST116') { // no rows found is OK
+      throw new Error(formatSupabaseError(error));
+    }
+  }
 
-    const newExpert: Expert = {
-        ...expertData,
-        id: `db-user-${crypto.randomUUID()}`,
-        createdAt: new Date().toISOString(),
-        isExample: false, // All DB users are real users
-    };
+  const dbExpertData = {
+      ...expertData,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      isExample: false,
+  };
 
-    const updatedExperts = [...dbExperts, newExpert];
-    saveDbExperts(updatedExperts);
+  try {
+    const { data, error } = await supabase
+      .from('experts')
+      .insert(dbExpertData)
+      .select()
+      .single();
 
-    return newExpert;
+    if (error) throw error;
+    return data as Expert;
+  } catch (error) {
+    throw new Error(formatSupabaseError(error));
+  }
 };
 
-/**
- * Updates an existing expert's data in the database.
- */
 export const updateExpert = async (expertId: string, profileData: Partial<Expert>): Promise<Expert> => {
-    console.log(`API: Updating expert ${expertId}`, profileData);
-    await new Promise(res => setTimeout(res, 500));
-    
-    const dbExperts = getDbExperts();
-    const expertIndex = dbExperts.findIndex(e => e.id === expertId);
-
-    if (expertIndex === -1) {
-        throw new Error("Expert not found in database.");
-    }
-    
-    const updatedExpert = {
-        ...dbExperts[expertIndex],
+    // Using admin client for updates is now a backend-only operation.
+    // This will likely fail due to RLS policies, which is expected for now.
+    const supabaseAdmin = getAdminClient();
+    const dbProfileData = {
         ...profileData,
         updatedAt: new Date().toISOString(),
     };
 
-    dbExperts[expertIndex] = updatedExpert;
-    saveDbExperts(dbExperts);
+    try {
+        const { data, error } = await supabaseAdmin
+            .from('experts')
+            .update(dbProfileData)
+            .eq('id', expertId)
+            .select()
+            .single();
 
-    return updatedExpert;
+        if (error) throw error;
+        if (!data) throw new Error("Update did not return data.");
+        return data as Expert;
+    } catch (error) {
+        console.error("Supabase error updating expert:", error);
+        throw new Error(formatSupabaseError(error));
+    }
 };
 
-
-/**
- * Deletes multiple experts from the database by their IDs.
- */
 export const deleteMultipleExperts = async (expertIds: string[]): Promise<void> => {
-    console.log("API: Deleting experts with IDs:", expertIds);
-    await new Promise(res => setTimeout(res, 800));
+  if (expertIds.length === 0) return;
+  // This is an admin action and will fail until moved to a backend function.
+  const supabaseAdmin = getAdminClient();
+  try {
+    const { error } = await supabaseAdmin
+      .from('experts')
+      .delete()
+      .in('id', expertIds);
 
-    let dbExperts = getDbExperts();
-    const expertIdsSet = new Set(expertIds);
-
-    const updatedExperts = dbExperts.filter(e => !expertIdsSet.has(e.id));
-    
-    saveDbExperts(updatedExperts);
+    if (error) throw error;
+  } catch (error) {
+    console.error("Supabase error deleting experts:", error);
+    throw new Error(formatSupabaseError(error));
+  }
 };
