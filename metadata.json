@@ -1,0 +1,7 @@
+{
+  "name": "BookDocker GO2",
+  "description": "A meeting point for book lovers and experts to present their collections of used books for sale. Connect with 'GO2' experts in various genres, browse their curated lists, and contact them directly to purchase.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookDocker GO2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+          theme: {
+            extend: {
+              colors: {
+                customBlue: {
+                  DEFAULT: '#51ADC9',
+                  100: '#e9f6f9',
+                  600: '#51ADC9',
+                  700: '#3c96b3',
+                  800: '#327c96',
+                }
+              }
+            }
+          }
+        }
+    </script>
+    <style>
+        /* For Webkit-based browsers (Chrome, Safari) */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* For Firefox */
+        html {
+            scrollbar-width: thin;
+            scrollbar-color: #888 #f1f1f1;
+        }
+    </style>
+<!-- Polyfill for import maps in older browsers like Firefox -->
+<script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.21.0",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^6.26.0",
+    "@supabase/supabase-js": "https://aistudiocdn.com/@supabase/supabase-js@^2.45.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>
