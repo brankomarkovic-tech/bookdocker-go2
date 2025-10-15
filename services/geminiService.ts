@@ -1,43 +1,43 @@
-import { GoogleGenAI } from "@google/genai";
-import { BookGenre, Expert, ModerationAlert } from "../types";
+import { GoogleGenAI, Type } from "@google/genai";
+import { BookGenre, Expert, ModerationAlert } from '../types';
 
-// Assume process.env.API_KEY is available and configured in the environment.
-// Do not ask the user for it.
+// FIX: Initialized the Google AI client. The environment variable is assumed to be configured.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
 /**
- * Generates a bio for an expert using the Gemini API.
+ * Generates an expert bio using the Gemini API.
  */
 export const generateBio = async (name: string, genre: BookGenre): Promise<string> => {
-    const prompt = `Generate a compelling, professional, and short (2-3 sentences) biography for a book expert named ${name}. Their specialty is ${genre}. The tone should be engaging and welcoming, highlighting their passion and expertise. Do not use markdown or quotes.`;
-    
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-        });
+  const prompt = `Write a compelling and professional bio for a book expert named ${name}. 
+  Their specialized genre is ${genre}. 
+  The bio should be engaging, around 50-70 words, and highlight their passion and deep knowledge in the genre.
+  Write it in the third person. For example, "is an expert in..." or "Their collection focuses on...".`;
 
-        return response.text.trim();
-    } catch (error) {
-        console.error("Error generating bio with Gemini:", error);
-        throw new Error("Failed to generate biography.");
-    }
+  try {
+    // FIX: Used ai.models.generateContent to generate text.
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    // FIX: Accessed the .text property directly for the response.
+    return response.text.trim();
+  } catch (error) {
+    console.error('Error generating bio with Gemini API:', error);
+    throw new Error('Failed to generate bio. Please try again.');
+  }
 };
 
 /**
- * Resizes an image file to fit within max dimensions while maintaining aspect ratio.
- * @returns A promise that resolves with a base64 data URL of the resized image.
+ * Resizes an image file to the specified dimensions and returns a base64 data URL.
+ * This function does not use the Gemini API.
  */
 export const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = (event) => {
-            if (!event.target?.result) {
-                return reject(new Error("Failed to read file."));
-            }
             const img = new Image();
-            img.src = event.target.result as string;
+            img.src = event.target?.result as string;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 let { width, height } = img;
@@ -53,7 +53,7 @@ export const resizeImage = (file: File, maxWidth: number, maxHeight: number): Pr
                         height = maxHeight;
                     }
                 }
-                
+
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
@@ -63,120 +63,144 @@ export const resizeImage = (file: File, maxWidth: number, maxHeight: number): Pr
                 ctx.drawImage(img, 0, 0, width, height);
                 resolve(canvas.toDataURL(file.type));
             };
-            img.onerror = (err) => reject(err);
+            img.onerror = (error) => reject(error);
         };
-        reader.onerror = (err) => reject(err);
+        reader.onerror = (error) => reject(error);
     });
 };
 
 /**
- * Gets admin-level insights by analyzing expert data with Gemini.
+ * Generates admin insights based on platform data using the Gemini API.
  */
 export const getAdminInsights = async (query: string, experts: Expert[]): Promise<string> => {
+    // We only need a subset of data to answer questions, to avoid sending too much data.
     const simplifiedExperts = experts.map(e => ({
         id: e.id,
         name: e.name,
         genre: e.genre,
         country: e.country,
-        subscriptionTier: e.subscriptionTier,
         status: e.status,
-        bookCount: e.books?.length || 0,
-        booksSold: e.books?.filter(b => b.status === 'Sold').length || 0,
+        subscriptionTier: e.subscriptionTier,
+        bookCount: e.books.length,
+        soldBooks: e.books.filter(b => b.status === 'Sold').length,
+        createdAt: e.createdAt,
     }));
 
-    const dataContext = JSON.stringify(simplifiedExperts, null, 2);
-
-    const prompt = `You are an AI administrative assistant for the BookDocker GO2 platform.
+    const prompt = `
+You are an AI admin assistant for a platform called BookDocker GO2, which connects book experts with buyers.
 Analyze the following platform data and answer the user's query.
-Provide concise, clear, and data-driven answers. Do not make up information.
-If the data is insufficient to answer, state that.
+The data is provided as an array of JSON objects, where each object represents a book expert.
 
-Platform Data (JSON format):
-${dataContext}
+Data:
+${JSON.stringify(simplifiedExperts, null, 2)}
 
-User Query: "${query}"
+User Query:
+"${query}"
 
-Your Answer:`;
-
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-pro', // Using pro for more complex reasoning
-            contents: prompt,
-        });
-        
-        return response.text.trim();
-    } catch (error) {
-        console.error("Error getting admin insights from Gemini:", error);
-        throw new Error("Failed to get insights from AI agent.");
-    }
-};
-
-/**
- * Scans all user-generated content for community guideline violations.
- * @returns A promise that resolves with an array of ModerationAlerts.
- */
-export const scanContentForIssues = async (experts: Expert[]): Promise<ModerationAlert[]> => {
-    const contentToScan: { expertId: string, expertName: string, contentType: 'bio' | 'blogPostTitle' | 'blogPostContent', content: string }[] = [];
-
-    experts.forEach(expert => {
-        if (expert.bio) {
-            contentToScan.push({ expertId: expert.id, expertName: expert.name, contentType: 'bio', content: expert.bio });
-        }
-        (expert.spotlights || []).forEach(spotlight => {
-            if (spotlight.title) {
-                contentToScan.push({ expertId: expert.id, expertName: expert.name, contentType: 'blogPostTitle', content: spotlight.title });
-            }
-            if (spotlight.content) {
-                contentToScan.push({ expertId: expert.id, expertName: expert.name, contentType: 'blogPostContent', content: spotlight.content });
-            }
-        });
-    });
-
-    if (contentToScan.length === 0) {
-        return [];
-    }
-
-    const prompt = `You are a content moderation AI for the BookDocker GO2 platform. Your task is to review user-generated content for violations of the community guidelines. The primary rule is: "Be Respectful. Be Kind." You must flag any content that contains hate speech, harassment, or discriminatory language based on race, color, ethnic origin, religion, political affiliation, sexual orientation, gender identity, minority status, nationality, or disability.
-
-Analyze the following JSON array of content. For each item that violates the guidelines, create an entry in a result array. If an item is clean, ignore it.
-
-Respond ONLY with a valid JSON array of flagged items. The array can be empty if no issues are found.
-Each object in the result array must have this exact structure:
-{
-  "expertId": "the_expert_id",
-  "expertName": "The Expert Name",
-  "contentType": "the_content_type",
-  "flaggedContent": "The exact content that was flagged",
-  "reason": "A brief, clear explanation of why the content was flagged (e.g., 'Contains discriminatory language towards a specific group.')."
-}
-
-Content to analyze:
-${JSON.stringify(contentToScan)}
-
-Result:
+Provide a clear, concise, and helpful answer based *only* on the provided data. Do not make up information.
+If the data is insufficient to answer the query, state that you don't have enough information.
+Format your answer in a readable way, using markdown if appropriate (e.g., lists).
 `;
 
     try {
         const response = await ai.models.generateContent({
+          model: 'gemini-2.5-pro', // Using pro for more complex analysis
+          contents: prompt,
+        });
+        return response.text.trim();
+    } catch (error) {
+        console.error('Error getting admin insights with Gemini API:', error);
+        throw new Error('Failed to get insights. Please try again.');
+    }
+};
+
+/**
+ * Scans expert content for potential community guideline violations using the Gemini API.
+ */
+export const scanContentForIssues = async (experts: Expert[]): Promise<ModerationAlert[]> => {
+    // Filter for experts with content to scan
+    const expertsWithContent = experts
+      .filter(e => !e.isExample && (e.bio || (e.spotlights && e.spotlights.length > 0)))
+      .map(e => ({
+        expertId: e.id,
+        expertName: e.name,
+        bio: e.bio,
+        spotlights: e.spotlights?.map(s => ({
+            title: s.title,
+            content: s.content,
+        })) || [],
+    }));
+    
+    if (expertsWithContent.length === 0) {
+        return [];
+    }
+    
+    const prompt = `
+You are a content moderation AI for BookDocker GO2. Your task is to scan user-generated content for violations of our community guidelines.
+
+**Community Guidelines:**
+We have a zero-tolerance policy for hate speech, harassment, or discriminatory content. This includes any offensive speech or writing based on:
+- Race, color, or ethnic origin
+- Religion or personal beliefs
+- Political affiliation
+- Sexual orientation, gender identity, or expression
+- Minority status, nationality, or disability
+Any content that is abusive, threatening, or promotes hostility will be flagged.
+
+**Task:**
+Analyze the following JSON data containing expert profiles. For each expert, check their 'bio' and each 'spotlight' (title and content).
+If you find a potential violation, create an alert object. If there are no violations for an expert, do not include them in the output.
+Only return content that is a clear violation. Be strict and avoid flagging borderline or subjective content.
+
+**Input Data:**
+${JSON.stringify(expertsWithContent, null, 2)}
+
+**Your output MUST be a valid JSON array of alert objects, matching the provided schema. Do not include any other text or explanations.**
+`;
+
+    try {
+        // FIX: Used Gemini API with JSON response mode for structured output.
+        const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
-                responseMimeType: "application/json",
+                responseMimeType: 'application/json',
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            expertId: { type: Type.STRING },
+                            expertName: { type: Type.STRING },
+                            contentType: {
+                                type: Type.STRING,
+                                enum: ['bio', 'blogPostTitle', 'blogPostContent'],
+                                description: "The type of content flagged: 'bio', 'blogPostTitle', or 'blogPostContent'",
+                            },
+                            flaggedContent: {
+                                type: Type.STRING,
+                                description: "The exact text that was flagged.",
+                            },
+                            reason: {
+                                type: Type.STRING,
+                                description: "A brief, clear explanation of why the content was flagged, referencing the specific guideline violated.",
+                            },
+                        },
+                        required: ['expertId', 'expertName', 'contentType', 'flaggedContent', 'reason'],
+                    },
+                },
             }
         });
 
-        const resultText = response.text.trim();
-        // Handle cases where the model might return an empty string for no violations
-        if (!resultText) {
-            return [];
-        }
-        const alerts: ModerationAlert[] = JSON.parse(resultText);
-        return alerts;
+        const jsonString = response.text.trim();
+        const results: ModerationAlert[] = JSON.parse(jsonString);
+        return results;
+
     } catch (error) {
-        console.error("Error scanning content with Gemini:", error);
+        console.error('Error scanning content with Gemini API:', error);
         if (error instanceof SyntaxError) {
-             console.error("Gemini did not return valid JSON for moderation scan.");
+             throw new Error('Failed to parse moderation results from the AI. The response was not valid JSON.');
         }
-        throw new Error("Failed to scan content for moderation issues.");
+        throw new Error('An error occurred during the content moderation scan. Please try again.');
     }
 };
