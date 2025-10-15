@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Expert } from '../types';
+import { Expert, Book, Spotlight, SocialLinks, BookQuery, PresentOffer } from '../types';
 import { supabase } from '../supabaseClient';
 
 export class DuplicateEmailError extends Error {
@@ -9,18 +9,53 @@ export class DuplicateEmailError extends Error {
   }
 }
 
-// TODO: The admin client requires a secret key and must be moved to a secure backend function (e.g., Supabase Edge Function).
-// For now, this is disabled to allow the frontend to deploy without exposing secrets.
+// TODO: The admin client requires a secret key and must be moved to a secure backend function.
 const getAdminClient = () => {
     console.error("Admin client is disabled in the production frontend for security reasons.");
-    // Returning the public client to prevent crashes, but admin actions will fail RLS.
     return supabase;
 };
 
 const formatSupabaseError = (error: any): string => {
     if (!error) return "An unknown error occurred.";
-    return `Database error: ${error.message} (Code: ${error.code})`;
+    let message = `Database error: ${error.message}`;
+    if(error.code) message += ` (Code: ${error.code})`;
+    if(error.details) message += ` Details: ${error.details}`;
+    return message;
 }
+
+// --- DATA TRANSLATION LAYER ---
+
+const toSnakeCase = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+const toCamelCase = (str: string) => str.replace(/_([a-z])/g, g => g[1].toUpperCase());
+
+const deepTransformKeys = (obj: any, transform: (key: string) => string): any => {
+    if (Array.isArray(obj)) {
+        return obj.map(v => deepTransformKeys(v, transform));
+    } else if (obj !== null && typeof obj === 'object' && !(obj instanceof Date)) {
+        return Object.keys(obj).reduce((acc, key) => {
+            acc[transform(key)] = deepTransformKeys(obj[key], transform);
+            return acc;
+        }, {} as any);
+    }
+    return obj;
+};
+
+const mapToDbExpert = (expertData: Partial<Expert>): any => {
+    // Exclude keys that are managed by the app/db or are not columns
+    const { id, createdAt, updatedAt, isExample, ...rest } = expertData;
+    return deepTransformKeys(rest, toSnakeCase);
+};
+
+const mapToExpert = (dbData: any): Expert => {
+    const expert = deepTransformKeys(dbData, toCamelCase) as Expert;
+    // Ensure nested arrays are not null/undefined
+    expert.books = expert.books || [];
+    expert.spotlights = expert.spotlights || [];
+    return expert;
+};
+
+
+// --- API FUNCTIONS ---
 
 export const getExperts = async (signal?: AbortSignal): Promise<Expert[]> => {
   try {
@@ -31,9 +66,8 @@ export const getExperts = async (signal?: AbortSignal): Promise<Expert[]> => {
     const { data, error } = await query;
 
     if (error) throw error;
-    // The data from Supabase is already in the correct camelCase format if columns are named correctly.
-    // Assuming the data is clean for now.
-    return (data || []) as Expert[];
+    
+    return (data || []).map(mapToExpert);
   } catch (error) {
     console.error("Supabase error in getExperts:", error);
     throw new Error(formatSupabaseError(error));
@@ -57,12 +91,12 @@ export const createExpert = async (expertData: Omit<Expert, 'id' | 'createdAt' |
     }
   }
 
-  const dbExpertData = {
+  const dbExpertData = mapToDbExpert({
       ...expertData,
-      id: crypto.randomUUID(),
+      id: crypto.randomUUID(), // This won't be sent, but good for consistency
       createdAt: new Date().toISOString(),
       isExample: false,
-  };
+  });
 
   try {
     const { data, error } = await supabase
@@ -72,19 +106,21 @@ export const createExpert = async (expertData: Omit<Expert, 'id' | 'createdAt' |
       .single();
 
     if (error) throw error;
-    return data as Expert;
+    return mapToExpert(data);
   } catch (error) {
+    console.error("Error adding expert:", error);
     throw new Error(formatSupabaseError(error));
   }
 };
 
 export const updateExpert = async (expertId: string, profileData: Partial<Expert>): Promise<Expert> => {
-    // Using admin client for updates is now a backend-only operation.
-    // This will likely fail due to RLS policies, which is expected for now.
     const supabaseAdmin = getAdminClient();
+    // FIX: Corrected a TypeScript error where `updated_at` was incorrectly added to a `Partial<Expert>` object.
+    // The fix involves first transforming the profile data to the database format (snake_case)
+    // and then adding the `updated_at` timestamp.
     const dbProfileData = {
-        ...profileData,
-        updatedAt: new Date().toISOString(),
+        ...mapToDbExpert(profileData),
+        updated_at: new Date().toISOString(),
     };
 
     try {
@@ -97,7 +133,7 @@ export const updateExpert = async (expertId: string, profileData: Partial<Expert
 
         if (error) throw error;
         if (!data) throw new Error("Update did not return data.");
-        return data as Expert;
+        return mapToExpert(data);
     } catch (error) {
         console.error("Supabase error updating expert:", error);
         throw new Error(formatSupabaseError(error));
@@ -106,7 +142,6 @@ export const updateExpert = async (expertId: string, profileData: Partial<Expert
 
 export const deleteMultipleExperts = async (expertIds: string[]): Promise<void> => {
   if (expertIds.length === 0) return;
-  // This is an admin action and will fail until moved to a backend function.
   const supabaseAdmin = getAdminClient();
   try {
     const { error } = await supabaseAdmin
