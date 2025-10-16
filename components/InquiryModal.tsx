@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Expert, Book } from '../types';
 import { EmailIcon } from './icons';
+import { invokeSendEmailFunction } from '../services/apiService';
 
 interface InquiryModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, expert, bo
   const [senderEmail, setSenderEmail] = useState('');
   const [message, setMessage] = useState('');
   const [isSent, setIsSent] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     if (book && isOpen) {
@@ -22,32 +24,42 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, expert, bo
       // Reset form state when modal is opened for a new book
       setSenderEmail('');
       setIsSent(false);
+      setIsSending(false);
     }
   }, [book, expert.name, isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!senderEmail) {
         alert('Please enter your email address.');
         return;
     }
-
-    // Simulate sending the inquiry
-    console.log({
-      to: expert.email,
-      from: senderEmail,
-      subject: `Inquiry about your book: ${book.title}`,
-      message: message,
-    });
     
-    setIsSent(true);
+    setIsSending(true);
+    try {
+        await invokeSendEmailFunction({
+            type: 'inquiry',
+            senderEmail,
+            message,
+            expertName: expert.name,
+            expertEmail: expert.email,
+            bookTitle: book.title,
+            bookAuthor: book.author,
+            bookYear: book.year,
+        });
 
-    // Close modal after a delay
-    setTimeout(() => {
-      onClose();
-    }, 3000);
+        setIsSent(true);
+        setTimeout(() => {
+          onClose();
+        }, 3000);
+
+    } catch (error) {
+        alert(error instanceof Error ? error.message : "An unexpected error occurred while sending the inquiry.");
+    } finally {
+        setIsSending(false);
+    }
   };
 
   return (
@@ -98,6 +110,7 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, expert, bo
                   required 
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-customBlue-600 focus:ring-customBlue-600"
                   placeholder="you@example.com"
+                  disabled={isSending}
                 />
               </div>
 
@@ -110,12 +123,15 @@ const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, expert, bo
                   rows={8} 
                   required 
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-customBlue-600 focus:ring-customBlue-600"
+                  disabled={isSending}
                 ></textarea>
               </div>
 
               <div className="flex justify-end space-x-3 pt-2">
                 <button type="button" onClick={onClose} className="py-2 px-4 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button type="submit" className="py-2 px-4 rounded-md border border-transparent bg-customBlue-600 text-sm font-medium text-white shadow-sm hover:bg-customBlue-700">Send Inquiry</button>
+                <button type="submit" disabled={isSending} className="py-2 px-4 rounded-md border border-transparent bg-customBlue-600 text-sm font-medium text-white shadow-sm hover:bg-customBlue-700 disabled:opacity-50 disabled:cursor-wait">
+                    {isSending ? 'Sending...' : 'Send Inquiry'}
+                </button>
               </div>
             </form>
           )}

@@ -6,6 +6,7 @@ import InquiryModal from './InquiryModal';
 import EditProfileForm from './EditProfileForm';
 import EditBooksForm from './EditBooksForm';
 import Pagination from './Pagination';
+import { invokeSendEmailFunction } from '../services/apiService';
 
 type SortKey = 'title' | 'author' | 'year' | 'addedAt';
 type SortDirection = 'asc' | 'desc';
@@ -36,6 +37,7 @@ const ExpertProfile: React.FC = () => {
   const [message, setMessage] = useState('');
   const [links, setLinks] = useState('');
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [bookSearchQuery, setBookSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection }>({ key: 'addedAt', direction: 'desc' });
   const [currentBookPage, setCurrentBookPage] = useState(1);
@@ -108,21 +110,35 @@ const ExpertProfile: React.FC = () => {
   }, [presentOffer, books]);
 
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!senderEmail || !message) {
         alert('Please fill out all required fields.');
         return;
     }
-    console.log({ to: email, from: senderEmail, message, links });
-    setFormSubmitted(true);
-    setSenderEmail('');
-    setMessage('');
-    setLinks('');
-    setTimeout(() => {
-        setFormSubmitted(false);
-        setIsContactFormOpen(false);
-    }, 3000);
+    setIsSending(true);
+    try {
+        await invokeSendEmailFunction({
+            type: 'contact',
+            senderEmail,
+            message,
+            links,
+            expertName: name,
+            expertEmail: email,
+        });
+        setFormSubmitted(true);
+        setSenderEmail('');
+        setMessage('');
+        setLinks('');
+        setTimeout(() => {
+            setFormSubmitted(false);
+            setIsContactFormOpen(false);
+        }, 3000);
+    } catch (error) {
+        alert(error instanceof Error ? error.message : "An unexpected error occurred while sending the message.");
+    } finally {
+        setIsSending(false);
+    }
   };
 
   const handleOpenInquiryModal = (book: Book) => {
@@ -378,6 +394,7 @@ const ExpertProfile: React.FC = () => {
                                   onChange={(e) => setSenderEmail(e.target.value)} 
                                   required 
                                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-customBlue-600 focus:ring-customBlue-600"
+                                  disabled={isSending}
                               />
                           </div>
                           <div>
@@ -389,6 +406,7 @@ const ExpertProfile: React.FC = () => {
                                   rows={4} 
                                   required 
                                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-customBlue-600 focus:ring-customBlue-600"
+                                  disabled={isSending}
                               ></textarea>
                           </div>
                           <div>
@@ -399,10 +417,13 @@ const ExpertProfile: React.FC = () => {
                                   value={links}
                                   onChange={(e) => setLinks(e.target.value)}
                                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-customBlue-600 focus:ring-customBlue-600"
+                                  disabled={isSending}
                               />
                           </div>
                           <div className="text-right">
-                              <button type="submit" className="py-2 px-4 rounded-md border border-transparent bg-customBlue-600 text-sm font-medium text-white shadow-sm hover:bg-customBlue-700">Send Message</button>
+                              <button type="submit" disabled={isSending} className="py-2 px-4 rounded-md border border-transparent bg-customBlue-600 text-sm font-medium text-white shadow-sm hover:bg-customBlue-700 disabled:opacity-50 disabled:cursor-wait">
+                                {isSending ? 'Sending...' : 'Send Message'}
+                              </button>
                           </div>
                       </form>
                   </div>

@@ -158,3 +158,20 @@ export const deleteMultipleExperts = async (expertIds: string[]): Promise<void> 
     throw new Error(formatSupabaseError(error));
   }
 };
+
+export const invokeSendEmailFunction = async (payload: object): Promise<void> => {
+    const { error } = await supabase.functions.invoke('send-email', {
+        body: payload,
+    });
+
+    if (error) {
+        console.error("Error invoking send-email function:", error);
+        if (error.message.includes('Function not found')) {
+             throw new Error("The email sending service is not available at this moment. Please try again later.");
+        }
+        if (error.message.includes('not configured')) {
+             throw new Error("The email sending service is not configured correctly. The administrator has been notified.");
+        }
+        throw new Error(`Failed to send email. Please try again.`);
+    }
+};

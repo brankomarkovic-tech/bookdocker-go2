@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { invokeSendEmailFunction } from '../services/apiService';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -10,40 +11,45 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [isSent, setIsSent] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) {
       alert('Feedback message cannot be empty.');
       return;
     }
     
-    console.log('--- User Feedback Received ---');
-    console.log(`Name: ${name || 'Not provided'}`);
-    console.log(`Email: ${email || 'Not provided'}`);
-    console.log(`Message: ${message}`);
-    console.log('-----------------------------');
+    setIsSending(true);
+    try {
+        await invokeSendEmailFunction({
+            type: 'feedback',
+            senderName: name,
+            senderEmail: email,
+            message,
+        });
 
-    setIsSent(true);
-    
-    // Reset fields for next time
-    setName('');
-    setEmail('');
-    setMessage('');
+        setIsSent(true);
+        setName('');
+        setEmail('');
+        setMessage('');
 
-    setTimeout(() => {
-      onClose();
-      // Use another timeout to reset the sent state after the modal has closed
-      // to avoid a flash of the form before closing.
-      setTimeout(() => setIsSent(false), 300); 
-    }, 3000);
+        setTimeout(() => {
+            onClose();
+            setTimeout(() => setIsSent(false), 300);
+        }, 3000);
+
+    } catch (error) {
+        alert(error instanceof Error ? error.message : "An unexpected error occurred while sending feedback.");
+    } finally {
+        setIsSending(false);
+    }
   };
 
   const handleClose = () => {
-    // Only allow closing if form hasn't been sent, to see the success message
-    if (!isSent) {
+    if (!isSent && !isSending) {
       onClose();
     }
   }
@@ -61,7 +67,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
           <h2 id="feedback-modal-title" className="text-xl font-bold text-gray-800">
             Provide Feedback
           </h2>
-          {!isSent && (
+          {!isSent && !isSending && (
             <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-3xl font-light leading-none" aria-label="Close feedback form">
               &times;
             </button>
@@ -89,6 +95,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
                   onChange={(e) => setName(e.target.value)} 
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-customBlue-600 focus:ring-customBlue-600"
                   placeholder="Jane Doe"
+                  disabled={isSending}
                 />
               </div>
               
@@ -101,6 +108,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
                   onChange={(e) => setEmail(e.target.value)} 
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-customBlue-600 focus:ring-customBlue-600"
                   placeholder="you@example.com"
+                  disabled={isSending}
                 />
               </div>
 
@@ -114,12 +122,15 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
                   required 
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-customBlue-600 focus:ring-customBlue-600"
                   placeholder="I think it would be great if..."
+                  disabled={isSending}
                 ></textarea>
               </div>
 
               <div className="flex justify-end space-x-3 pt-2">
                 <button type="button" onClick={onClose} className="py-2 px-4 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button type="submit" className="py-2 px-4 rounded-md border border-transparent bg-customBlue-600 text-sm font-medium text-white shadow-sm hover:bg-customBlue-700">Submit Feedback</button>
+                <button type="submit" disabled={isSending} className="py-2 px-4 rounded-md border border-transparent bg-customBlue-600 text-sm font-medium text-white shadow-sm hover:bg-customBlue-700 disabled:opacity-50 disabled:cursor-wait">
+                    {isSending ? 'Submitting...' : 'Submit Feedback'}
+                </button>
               </div>
             </form>
           )}
