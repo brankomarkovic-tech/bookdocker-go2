@@ -1,19 +1,28 @@
-import { Expert, BookGenre, BookStatus, UserRole } from './types';
+import { Expert, BookGenre, BookStatus, UserRole, UserStatus, SubscriptionTier } from './types';
 
-// IMPORTANT: In a real-world application, never hardcode credentials like this.
-// This is for demonstration purposes in a client-side-only environment.
+// This email is recognized by the application logic as the platform administrator.
 export const ADMIN_CREDENTIALS = {
-  email: 'admin@bookdocker.go2',
+  email: 'skljoc.ljubimac@gmail.com',
 };
 
-export const GUEST_CREDENTIALS = {
-  email: 'guest@bookdocker.go2',
-  name: 'Guest Reader',
+// This is the hardcoded system user object for the administrator.
+// It is not stored in the database and is used for special login handling.
+export const ADMIN_USER_OBJECT: Expert = {
+    id: 'system-admin-001',
+    name: 'Platform Administrator',
+    email: ADMIN_CREDENTIALS.email,
+    role: UserRole.ADMIN,
+    status: UserStatus.ACTIVE,
+    subscriptionTier: SubscriptionTier.PREMIUM, // Admins have all privileges
+    genre: BookGenre.TECHNOLOGY, // A default genre
+    bio: 'System Administrator for BookDocker GO2 platform.',
+    avatarUrl: 'https://i.pravatar.cc/150?u=admin-bookdocker-go2',
+    onLeave: false,
+    books: [],
+    spotlights: [],
+    createdAt: new Date().toISOString(),
+    isExample: false, // This is a real system account, not an example.
 };
-
-export const PREMIUM_CREDENTIALS = {
-  email: 'premium@bookdocker.go2',
-}
 
 // Subscription Tier Limits
 export const FREE_BOOK_LIMIT = 35;

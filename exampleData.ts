@@ -2,22 +2,6 @@ import { Expert, BookGenre, BookStatus, UserRole, UserStatus, SubscriptionTier }
 
 export const EXAMPLE_EXPERTS: Expert[] = [
     {
-        id: 'admin',
-        name: 'Admin',
-        email: 'admin@bookdocker.go2',
-        role: UserRole.ADMIN,
-        status: UserStatus.ACTIVE,
-        subscriptionTier: SubscriptionTier.PREMIUM,
-        genre: BookGenre.AI,
-        bio: 'Administrator of BookDocker GO2.',
-        avatarUrl: 'https://i.pravatar.cc/150?u=admin',
-        books: [],
-        onLeave: false,
-        spotlights: [],
-        createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
-        isExample: true,
-    },
-    {
         id: 'premium-user-1',
         name: 'Dr. Aris Thorne',
         email: 'premium@bookdocker.go2',

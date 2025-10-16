@@ -2,7 +2,7 @@ import React, { createContext, useState, useEffect, useMemo, useCallback, ReactN
 import { Expert, BookGenre, WishlistItem, UserRole, UserStatus, Book, SubscriptionTier, BookStatus } from '../types';
 import { getExperts, createExpert, updateExpert, deleteMultipleExperts as apiDeleteMultipleExperts, DuplicateEmailError } from '../services/apiService';
 import { EXAMPLE_EXPERTS } from '../exampleData';
-import { GUEST_CREDENTIALS } from '../constants';
+import { ADMIN_CREDENTIALS, ADMIN_USER_OBJECT } from '../constants';
 
 // Define the shape of the context
 interface AppContextType {
@@ -124,23 +124,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const login = useCallback(async (email: string): Promise<Expert | null> => {
         setIsLoading(true);
         try {
-            if (email === GUEST_CREDENTIALS.email) {
-                const guestUser: Expert = {
-                    id: 'guest-user', name: GUEST_CREDENTIALS.name, email: GUEST_CREDENTIALS.email, role: UserRole.BUYER,
-                    status: UserStatus.ACTIVE, subscriptionTier: SubscriptionTier.FREE, genre: BookGenre.FICTION, bio: '',
-                    avatarUrl: 'https://i.pravatar.cc/150?u=guest', books: [], spotlights: [], onLeave: false,
-                    createdAt: new Date().toISOString(), isExample: true
-                };
-                setCurrentUser(guestUser);
-                sessionStorage.setItem('currentUser', JSON.stringify(guestUser));
-                return guestUser;
+            const lowerCaseEmail = email.toLowerCase();
+
+            // Special check for the hardcoded administrator
+            if (lowerCaseEmail === ADMIN_CREDENTIALS.email.toLowerCase()) {
+                const adminUser = ADMIN_USER_OBJECT;
+                setCurrentUser(adminUser);
+                sessionStorage.setItem('currentUser', JSON.stringify(adminUser));
+                setView('admin');
+                return adminUser;
             }
 
-            const user = experts.find(e => e.email.toLowerCase() === email.toLowerCase());
+            // Proceed with normal user login
+            const user = experts.find(e => e.email.toLowerCase() === lowerCaseEmail);
             if (user) {
                 setCurrentUser(user);
                 sessionStorage.setItem('currentUser', JSON.stringify(user));
-                if (user.role === UserRole.ADMIN) {
+                if (user.role === UserRole.ADMIN) { // Should not happen now, but good to keep
                     setView('admin');
                 } else {
                     setView('list');

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../hooks/useAppContext';
-import { ADMIN_CREDENTIALS, GUEST_CREDENTIALS, PREMIUM_CREDENTIALS } from '../constants';
+// FIX: Removed unused credentials import. GUEST_CREDENTIALS and PREMIUM_CREDENTIALS were not exported from constants, causing an error. ADMIN_CREDENTIALS was also unused.
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -84,33 +84,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             </button>
           </div>
         </form>
-
-        <div className="p-6 border-t bg-gray-50 rounded-b-lg">
-            <h3 className="text-sm font-semibold text-gray-600 text-center mb-3">Quick Login (Demo)</h3>
-            <div className="flex justify-center gap-2 flex-wrap">
-                <button 
-                    onClick={() => handleLogin(ADMIN_CREDENTIALS.email)}
-                    disabled={isLoading}
-                    className="py-2 px-4 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-                >
-                    Login as Admin
-                </button>
-                <button 
-                    onClick={() => handleLogin(GUEST_CREDENTIALS.email)}
-                    disabled={isLoading}
-                    className="py-2 px-4 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-                >
-                    Login as Guest
-                </button>
-                 <button 
-                    onClick={() => handleLogin(PREMIUM_CREDENTIALS.email)}
-                    disabled={isLoading}
-                    className="py-2 px-4 rounded-md border border-customBlue-600 bg-customBlue-100 text-sm font-medium text-customBlue-800 hover:bg-customBlue-200 disabled:opacity-50"
-                >
-                    Login as Premium
-                </button>
-            </div>
-        </div>
       </div>
     </div>
   );
