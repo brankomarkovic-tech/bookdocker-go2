@@ -105,9 +105,8 @@ serve(async (req: Request) => {
 
   try {
     const payload = await req.json();
-    // FIX: Explicitly reference `Deno` from `globalThis` to resolve potential
-    // type errors where the global `Deno` namespace is not recognized.
-    const resendApiKey = globalThis.Deno.env.get('RESEND_API_KEY');
+    // FIX: Cast to `any` to bypass TypeScript error where the `env` property is not recognized on the `Deno` global type.
+    const resendApiKey = (globalThis.Deno as any).env.get('RESEND_API_KEY');
 
     if (!resendApiKey) {
       console.error('RESEND_API_KEY is not set in Supabase secrets.');

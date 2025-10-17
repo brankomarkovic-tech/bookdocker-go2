@@ -109,6 +109,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     }, [experts, navigateToProfile]);
 
+    // Scroll-to-top on view change
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [view]);
+
 
     const navigateToAdmin = useCallback(() => {
         if (currentUser?.role === UserRole.ADMIN) {
