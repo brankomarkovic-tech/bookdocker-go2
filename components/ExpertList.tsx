@@ -5,6 +5,7 @@ import { SearchIcon, ChevronDownIcon, HeartIcon, RightArrowIcon } from './icons'
 import { BookGenre, Expert, Book, BookStatus, UserRole } from '../types';
 import IntroSection from './IntroSection';
 import Pagination from './Pagination';
+import { invokeSendEmailFunction } from '../services/apiService';
 
 const formatPrice = (price?: number, currency?: string) => {
     if (price === undefined || price === null) return null;
@@ -136,26 +137,40 @@ const SearchResultGroup: React.FC<{ expert: Expert }> = ({ expert }) => {
 };
 
 const InviteFriendSection: React.FC = () => {
+  const { currentUser } = useAppContext();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [isSent, setIsSent] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
       alert('Please enter an email address.');
       return;
     }
-    console.log(`Inviting ${email} with message: "${message}"`);
-    console.log(`The invite link would be: ${window.location.href}`);
     
-    setIsSent(true);
-    setEmail('');
-    setMessage('');
+    setIsSending(true);
+    try {
+        await invokeSendEmailFunction({
+            type: 'invite',
+            friendEmail: email,
+            message,
+            inviterName: currentUser ? currentUser.name : 'A fellow book lover'
+        });
 
-    setTimeout(() => {
-      setIsSent(false);
-    }, 5000);
+        setIsSent(true);
+        setEmail('');
+        setMessage('');
+
+        setTimeout(() => {
+          setIsSent(false);
+        }, 5000);
+    } catch (error) {
+        alert(error instanceof Error ? error.message : "An unexpected error occurred while sending the invitation.");
+    } finally {
+        setIsSending(false);
+    }
   };
 
   return (
@@ -187,6 +202,7 @@ const InviteFriendSection: React.FC = () => {
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-customBlue-600 focus:ring-customBlue-600"
                         placeholder="friend@example.com"
                         aria-required="true"
+                        disabled={isSending}
                     />
                 </div>
                 <div>
@@ -200,14 +216,16 @@ const InviteFriendSection: React.FC = () => {
                         rows={3}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-customBlue-600 focus:ring-customBlue-600"
                         placeholder="Check out this cool community for book lovers!"
+                        disabled={isSending}
                     ></textarea>
                 </div>
                 <div className="text-center pt-2">
                     <button
                         type="submit"
-                        className="bg-customBlue-600 text-white font-semibold py-3 px-8 rounded-lg hover:bg-customBlue-700 transition duration-300 w-full sm:w-auto"
+                        className="bg-customBlue-600 text-white font-semibold py-3 px-8 rounded-lg hover:bg-customBlue-700 transition duration-300 w-full sm:w-auto disabled:opacity-50 disabled:cursor-wait"
+                        disabled={isSending}
                     >
-                        Send Invite
+                        {isSending ? 'Sending...' : 'Send Invite'}
                     </button>
                 </div>
             </form>

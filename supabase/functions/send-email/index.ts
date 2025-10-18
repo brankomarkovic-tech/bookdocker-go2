@@ -4,9 +4,12 @@
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
-// Hardcode admin email inside the function for security
+// Hardcode admin email and production domain for security and professionalism
 const ADMIN_EMAIL = 'skljoc.ljubimac@gmail.com';
-const FROM_ADDRESS = 'BookDocker GO2 <onboarding@resend.dev>';
+const PRODUCTION_DOMAIN = 'bookdockergo2.com';
+const FROM_ADDRESS = `BookDocker GO2 <noreply@${PRODUCTION_DOMAIN}>`;
+const PLATFORM_URL = `https://${PRODUCTION_DOMAIN}`;
+
 
 // --- EMAIL TEMPLATES ---
 
@@ -92,6 +95,20 @@ const getFeedbackEmailHtml = (payload: any) => {
     return getEmailHtml(title, body);
 };
 
+const getInviteEmailHtml = (payload: any) => {
+    const { inviterName, message } = payload;
+    const title = `${inviterName} sent you an invitation!`;
+    const body = `
+        <p>Hello,</p>
+        <p>Great news! ${inviterName} has invited you to join BookDocker GO2, a community for book lovers and expert collectors.</p>
+        ${message ? `<p>They added a personal message for you:</p><div class="message-box"><p>${message.replace(/\n/g, '<br>')}</p></div>` : ''}
+        <p>Click the button below to explore the platform:</p>
+        <p style="text-align: center; margin: 20px 0;"><a href="${PLATFORM_URL}" class="button">Explore BookDocker GO2</a></p>
+    `;
+    return getEmailHtml(title, body);
+};
+
+
 serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -132,6 +149,12 @@ serve(async (req: Request) => {
         to = ADMIN_EMAIL;
         subject = `New Feedback for BookDocker GO2`;
         html = getFeedbackEmailHtml(payload);
+        break;
+      
+      case 'invite':
+        to = payload.friendEmail;
+        subject = `${payload.inviterName} has invited you to BookDocker GO2!`;
+        html = getInviteEmailHtml(payload);
         break;
 
       default:
