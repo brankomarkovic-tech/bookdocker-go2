@@ -24,7 +24,7 @@ const commonStyles = `
   .book-details { background-color: #e9f6f9; padding: 10px; border-radius: 5px; margin: 15px 0; }
 `;
 
-const getEmailHtml = (title: string, body: string) => `
+const getEmailHtml = (title: string, body: string, footerText: string) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -37,7 +37,7 @@ const getEmailHtml = (title: string, body: string) => `
       ${body}
     </div>
     <div class="footer">
-      This is an automated message from the BookDocker GO2 platform.
+      ${footerText}
     </div>
   </div>
 </body>
@@ -60,7 +60,7 @@ const getInquiryEmailHtml = (payload: any) => {
             <p>${message.replace(/\n/g, '<br>')}</p>
         </div>
     `;
-    return getEmailHtml(title, body);
+    return getEmailHtml(title, body, 'This is an automated message from the BookDocker GO2 platform.');
 };
 
 const getContactEmailHtml = (payload: any) => {
@@ -75,7 +75,7 @@ const getContactEmailHtml = (payload: any) => {
         </div>
         ${links ? `<p><strong>Shared Links:</strong> ${links}</p>` : ''}
     `;
-    return getEmailHtml(title, body);
+    return getEmailHtml(title, body, 'This is an automated message from the BookDocker GO2 platform.');
 };
 
 const getFeedbackEmailHtml = (payload: any) => {
@@ -92,20 +92,21 @@ const getFeedbackEmailHtml = (payload: any) => {
             <p>${message.replace(/\n/g, '<br>')}</p>
         </div>
     `;
-    return getEmailHtml(title, body);
+    return getEmailHtml(title, body, 'This is an automated message sent to the platform administrator.');
 };
 
 const getInviteEmailHtml = (payload: any) => {
     const { inviterName, message } = payload;
-    const title = `${inviterName} sent you an invitation!`;
+    const title = `You're Invited to BookDocker GO2!`;
     const body = `
         <p>Hello,</p>
-        <p>Great news! ${inviterName} has invited you to join BookDocker GO2, a community for book lovers and expert collectors.</p>
+        <p>Great news! Your friend, ${inviterName}, has invited you to join BookDocker GO2, a community for book lovers and expert collectors.</p>
         ${message ? `<p>They added a personal message for you:</p><div class="message-box"><p>${message.replace(/\n/g, '<br>')}</p></div>` : ''}
-        <p>Click the button below to explore the platform:</p>
+        <p>Click the button below to explore the platform and see what our experts are sharing:</p>
         <p style="text-align: center; margin: 20px 0;"><a href="${PLATFORM_URL}" class="button">Explore BookDocker GO2</a></p>
     `;
-    return getEmailHtml(title, body);
+    const footer = `This invitation was sent on behalf of ${inviterName} via the BookDocker GO2 platform.`;
+    return getEmailHtml(title, body, footer);
 };
 
 
@@ -153,7 +154,7 @@ serve(async (req: Request) => {
       
       case 'invite':
         to = payload.friendEmail;
-        subject = `${payload.inviterName} has invited you to BookDocker GO2!`;
+        subject = `${payload.inviterName} has invited you to join BookDocker GO2!`;
         html = getInviteEmailHtml(payload);
         break;
 
