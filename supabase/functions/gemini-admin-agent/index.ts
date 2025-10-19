@@ -3,11 +3,11 @@
 // The platform owner must set this in their Supabase project dashboard under Project Settings > Edge Functions.
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-// FIX: Using deno-compatible esm.sh URL for imports in Supabase Edge Functions
-import { GoogleGenAI, Type } from 'https://esm.sh/@google/genai@0.1.0';
+// DEFINITIVE FIX: The URL now points to the correct, modern version of the GenAI library, resolving the "Module not found" error.
+import { GoogleGenAI, Type } from 'https://esm.sh/@google/genai@^1.21.0';
 
 // Import shared types from the project root.
-import { Expert, ModerationAlert } from '../../../types.ts';
+import { Expert, ModerationAlert, BookStatus, SubscriptionTier } from '../../../types.ts';
 
 /**
  * Handles 'scanContentForIssues' requests.
@@ -25,7 +25,6 @@ async function handleScanContentForIssues(ai: GoogleGenAI, experts: Expert[]): P
     - No abusive, threatening, or hostile content.
   `;
 
-  // Define a strict JSON schema for the model's response
   const responseSchema = {
       type: Type.OBJECT,
       properties: {
@@ -74,7 +73,6 @@ async function handleScanContentForIssues(ai: GoogleGenAI, experts: Expert[]): P
       `;
 
       try {
-        // Per guidelines, use gemini-2.5-flash for faster, more cost-effective classification
         const response = await ai.models.generateContent({
           model: 'gemini-2.5-flash',
           contents: prompt,
@@ -104,7 +102,6 @@ async function handleScanContentForIssues(ai: GoogleGenAI, experts: Expert[]): P
         }
       } catch (e) {
         console.error(`Error scanning content for expert ${expert.id}:`, e);
-        // Continue to the next piece of content even if one fails
       }
     }
   }
@@ -112,50 +109,56 @@ async function handleScanContentForIssues(ai: GoogleGenAI, experts: Expert[]): P
   return { alerts: allAlerts };
 }
 
-// FIX: Add a handler for 'getAdminInsights' to answer natural language questions about platform data.
+/**
+ * Handles 'getAdminInsights' requests.
+ * Analyzes platform data to answer natural language queries.
+ */
 async function handleGetAdminInsights(ai: GoogleGenAI, query: string, experts: Expert[]): Promise<{ insight: string }> {
-    if (!query) {
-        throw new Error("Query is required for insights.");
-    }
-    if (!experts) {
-        throw new Error("Experts data is required for insights.");
-    }
+    if (!query) throw new Error("Query is required for insights.");
+    if (!experts) throw new Error("Experts data is required for insights.");
 
-    // Summarize expert data to save tokens and focus the model on relevant info.
-    const expertSummary = experts.map(e => ({
-        id: e.id,
-        name: e.name,
-        email: e.email,
-        role: e.role,
-        status: e.status,
-        subscriptionTier: e.subscriptionTier,
-        genre: e.genre,
-        country: e.country,
-        onLeave: e.onLeave,
-        bookCount: e.books?.length || 0,
-        soldBookCount: e.books?.filter(b => b.status === 'Sold').length || 0,
-        createdAt: e.createdAt,
-    }));
+    // Pre-process data into a tiny summary to prevent timeouts.
+    const platformExperts = experts.filter(e => !e.isExample);
+    const allBooks = platformExperts.flatMap(e => e.books || []);
+    const genreCounts = platformExperts.reduce((acc, e) => {
+        acc[e.genre] = (acc[e.genre] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+    const countryCounts = platformExperts.reduce((acc, e) => {
+        if(e.country) {
+            acc[e.country] = (acc[e.country] || 0) + 1;
+        }
+        return acc;
+    }, {} as Record<string, number>);
+
+    const platformSummary = {
+        totalExperts: platformExperts.length,
+        premiumExperts: platformExperts.filter(e => e.subscriptionTier === SubscriptionTier.PREMIUM).length,
+        expertsOnLeave: platformExperts.filter(e => e.onLeave).length,
+        totalBooks: allBooks.length,
+        soldBooks: allBooks.filter(b => b.status === BookStatus.SOLD).length,
+        availableBooks: allBooks.filter(b => b.status === BookStatus.AVAILABLE).length,
+        genreDistribution: genreCounts,
+        countryDistribution: countryCounts,
+    };
 
     const prompt = `
-      You are an AI Admin Agent for a platform called BookDocker GO2, which connects book experts with buyers.
-      You will be given a natural language query from an administrator and a JSON object containing data about the platform's experts.
-      Your task is to analyze the data and provide a concise, accurate answer to the query.
-      Do not provide any information that cannot be derived from the provided data.
-      Do not invent data. If you cannot answer, say so.
+      You are an AI Admin Agent for a platform called BookDocker GO2.
+      You will be given a natural language query from an administrator and a pre-calculated JSON summary of the platform's data.
+      Your task is to analyze ONLY THIS SUMMARY to provide a concise, accurate answer to the query.
+      Do not provide any information that cannot be derived from the provided summary.
       The output should be a single string of plain text.
 
       QUERY:
       "${query}"
 
-      EXPERT DATA (summary):
-      ${JSON.stringify(expertSummary, null, 2)}
+      PLATFORM DATA SUMMARY:
+      ${JSON.stringify(platformSummary, null, 2)}
     `;
 
     try {
-        // Per guidelines, use gemini-2.5-pro for complex text tasks and reasoning.
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-pro',
+            model: 'gemini-2.5-flash',
             contents: prompt,
         });
 
@@ -166,7 +169,6 @@ async function handleGetAdminInsights(ai: GoogleGenAI, query: string, experts: E
         throw new Error("The AI agent failed to generate an insight.");
     }
 }
-
 
 // --- MAIN SERVER LOGIC ---
 serve(async (req: Request) => {
@@ -195,7 +197,6 @@ serve(async (req: Request) => {
       case 'scanContentForIssues':
         responseData = await handleScanContentForIssues(ai, experts);
         break;
-      // FIX: Handle the new 'getAdminInsights' action type.
       case 'getAdminInsights':
         responseData = await handleGetAdminInsights(ai, query, experts);
         break;
