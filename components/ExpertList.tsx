@@ -391,7 +391,7 @@ const ExpertList: React.FC = () => {
           </div>
         )}
 
-        <h2 className="text-4xl font-bold text-center text-[#063542] mb-2">BookDocker GO2 Experts</h2>
+        <h2 className="text-4xl font-bold text-center text-[#063542] mb-2">BookDocker GO2s</h2>
         <p className="text-center text-gray-500 mb-8 text-lg">Your curated source for used books.</p>
         
         <div className="mb-8 max-w-lg mx-auto">
