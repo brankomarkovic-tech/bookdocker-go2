@@ -1,15 +1,18 @@
 import { BookGenre, Expert, ModerationAlert } from '../types';
+import { invokeGeminiAdminAgent } from './apiService';
 
-// TODO: All Gemini functions require a secret API key and must be moved to a secure backend function.
-// They are temporarily disabled on the client-side to allow the app to deploy.
 
-const disabledFeatureMessage = 'This AI feature is temporarily disabled for security reasons and will be enabled in a future update.';
+// The client-side bio generation is permanently disabled for security.
+// All Gemini API calls must go through a secure backend function.
+const disabledFeatureMessage = 'This specific AI feature is disabled on the client for security. Other admin AI features are available.';
 
 export const generateBio = async (name: string, genre: BookGenre): Promise<string> => {
-  console.error("generateBio is disabled on the client.");
+  console.error("generateBio is permanently disabled on the client.");
   alert(disabledFeatureMessage);
-  return `Bio for ${name}, an expert in ${genre}.`;
+  // Return a non-AI-generated string as a fallback.
+  return `As an expert in ${genre}, I, ${name}, have curated a collection of rare and interesting books. My passion for ${genre.toLowerCase()} drives me to find unique editions and share them with fellow enthusiasts. I believe every book has a story, not just in its pages, but in its history as an object. I look forward to connecting with other book lovers on this platform.`;
 };
+
 
 export const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -48,13 +51,28 @@ export const resizeImage = (file: File, maxWidth: number, maxHeight: number): Pr
 };
 
 export const getAdminInsights = async (query: string, experts: Expert[]): Promise<string> => {
-    console.error("getAdminInsights is disabled on the client.");
-    alert(disabledFeatureMessage);
-    return "AI insights are temporarily unavailable.";
+    try {
+        const data = await invokeGeminiAdminAgent({
+            type: 'getAdminInsights',
+            query,
+            experts
+        });
+        return data.response;
+    } catch (error) {
+        console.error("Error getting admin insights:", error);
+        throw error; // Re-throw to be handled by the component
+    }
 };
 
 export const scanContentForIssues = async (experts: Expert[]): Promise<ModerationAlert[]> => {
-    console.error("scanContentForIssues is disabled on the client.");
-    alert(disabledFeatureMessage);
-    return [];
+    try {
+        const data = await invokeGeminiAdminAgent({
+            type: 'scanContentForIssues',
+            experts
+        });
+        return data.alerts;
+    } catch (error) {
+        console.error("Error scanning content:", error);
+        throw error; // Re-throw to be handled by the component
+    }
 };

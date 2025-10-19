@@ -175,3 +175,27 @@ export const invokeSendEmailFunction = async (payload: object): Promise<void> =>
         throw new Error(`Failed to send email. Please try again.`);
     }
 };
+
+export const invokeGeminiAdminAgent = async (payload: object): Promise<any> => {
+    const { data, error } = await supabase.functions.invoke('gemini-admin-agent', {
+        body: payload,
+    });
+
+    if (error) {
+        console.error("Error invoking gemini-admin-agent function:", error);
+        if (error.message.includes('Function not found')) {
+             throw new Error("The AI service is not available. Please ensure the function is deployed.");
+        }
+        if (error.message.includes('not configured')) {
+             throw new Error("The AI service is missing its API key. The administrator needs to configure this in Supabase secrets.");
+        }
+        throw new Error(`An AI agent error occurred. Please try again.`);
+    }
+    
+    // The function itself might return an error in its JSON body
+    if (data?.error) {
+        throw new Error(data.error);
+    }
+
+    return data;
+};
