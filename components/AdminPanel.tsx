@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { Logo } from './Logo';
 import Dashboard from './admin/Dashboard';
-import AIAgent from './admin/AIAgent';
 import { BookIcon, SparklesIcon, ShieldExclamationIcon, CogIcon } from './icons';
 import ContentModeration from './admin/ContentModeration';
 import UserManagement from './admin/UserManagement';
-import { useAppContext } from '../hooks/useAppContext';
+import { useAppContext } from '../../hooks/useAppContext';
 
-type AdminView = 'dashboard' | 'user-management' | 'content-moderation' | 'ai-agent';
+type AdminView = 'dashboard' | 'user-management' | 'content-moderation';
 
 const AdminPanel: React.FC = () => {
     const { navigateToList } = useAppContext();
@@ -40,7 +39,6 @@ const AdminPanel: React.FC = () => {
             case 'dashboard': return <Dashboard />;
             case 'user-management': return <UserManagement />;
             case 'content-moderation': return <ContentModeration />;
-            case 'ai-agent': return <AIAgent />;
             default: return <Dashboard />;
         }
     };
@@ -50,7 +48,6 @@ const AdminPanel: React.FC = () => {
             dashboard: 'Platform Dashboard',
             'user-management': 'User Management',
             'content-moderation': 'Content Moderation',
-            'ai-agent': 'AI Administrative Agent'
         };
         return viewTitles[activeView];
     }
@@ -68,7 +65,6 @@ const AdminPanel: React.FC = () => {
                     <NavButton view="dashboard" label="Dashboard" icon={<BookIcon className="w-6 h-6" />} />
                     <NavButton view="user-management" label="User Management" icon={<CogIcon className="w-6 h-6" />} />
                     <NavButton view="content-moderation" label="Content Moderation" icon={<ShieldExclamationIcon className="w-6 h-6" />} />
-                    <NavButton view="ai-agent" label="AI Agent" icon={<SparklesIcon className="w-6 h-6" />} />
                 </nav>
                 <footer className="p-4 border-t border-customBlue-700/50">
                     <button

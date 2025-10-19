@@ -50,20 +50,6 @@ export const resizeImage = (file: File, maxWidth: number, maxHeight: number): Pr
     });
 };
 
-export const getAdminInsights = async (query: string, experts: Expert[]): Promise<string> => {
-    try {
-        const data = await invokeGeminiAdminAgent({
-            type: 'getAdminInsights',
-            query,
-            experts
-        });
-        return data.response;
-    } catch (error) {
-        console.error("Error getting admin insights:", error);
-        throw error; // Re-throw to be handled by the component
-    }
-};
-
 export const scanContentForIssues = async (experts: Expert[]): Promise<ModerationAlert[]> => {
     try {
         const data = await invokeGeminiAdminAgent({
@@ -73,6 +59,25 @@ export const scanContentForIssues = async (experts: Expert[]): Promise<Moderatio
         return data.alerts;
     } catch (error) {
         console.error("Error scanning content:", error);
+        throw error; // Re-throw to be handled by the component
+    }
+};
+
+// FIX: Add missing getAdminInsights function to provide data for the AI Agent component.
+export const getAdminInsights = async (query: string, experts: Expert[]): Promise<string> => {
+    try {
+        const data = await invokeGeminiAdminAgent({
+            type: 'getAdminInsights',
+            query,
+            experts,
+        });
+        // Assuming the backend returns an object with an 'insight' property
+        if (data && typeof data.insight === 'string') {
+            return data.insight;
+        }
+        throw new Error('Received an invalid response from the AI agent.');
+    } catch (error) {
+        console.error("Error getting admin insights:", error);
         throw error; // Re-throw to be handled by the component
     }
 };
