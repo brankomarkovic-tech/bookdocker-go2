@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Logo } from './Logo';
 import Dashboard from './admin/Dashboard';
-import { BookIcon, SparklesIcon, ShieldExclamationIcon, CogIcon } from './icons';
+import { BookIcon, ShieldExclamationIcon, CogIcon } from './icons';
 import ContentModeration from './admin/ContentModeration';
 import UserManagement from './admin/UserManagement';
-import { useAppContext } from '../../hooks/useAppContext';
+import { useAppContext } from '../hooks/useAppContext';
 
 type AdminView = 'dashboard' | 'user-management' | 'content-moderation';
 
