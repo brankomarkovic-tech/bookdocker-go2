@@ -75,7 +75,7 @@ const Footer: React.FC = () => {
             </button>
             <span className="text-gray-500 hidden sm:inline">|</span>
             <a
-              href="https://www.youtube.com"
+              href="https://www.youtube.com/@bookdocker"
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-customBlue-100 hover:text-white hover:underline transition-colors"
