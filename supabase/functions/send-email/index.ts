@@ -45,11 +45,19 @@ const getEmailHtml = (title: string, body: string, footerText: string) => `
 `;
 
 const getInquiryEmailHtml = (payload: any) => {
-    const { expertName, bookTitle, bookAuthor, bookYear, senderEmail, message } = payload;
+    const { expertName, bookTitle, bookAuthor, bookYear, message, expertEmail } = payload;
     const title = `New Book Inquiry: "${bookTitle}"`;
+    const privacyNotice = `
+      <div style="background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 5px; margin-top: 20px;">
+        <p style="margin: 0; font-weight: bold;">Important Privacy Notice</p>
+        <p style="margin-top: 5px; font-size: 14px;">
+          Replying to this message will reveal your email address (<strong>${expertEmail}</strong>) to the user. As this email is used to log in to your BookDocker GO2 account, please be mindful of this when communicating. We are actively developing a secure, on-platform messaging system to better protect your privacy in the future.
+        </p>
+      </div>
+    `;
     const body = `
         <p>Hello ${expertName},</p>
-        <p>A user is interested in one of your books. You can reply directly to them at: <a href="mailto:${senderEmail}">${senderEmail}</a></p>
+        <p>A user is interested in one of your books. Please press "Reply" in your email client to respond to them directly.</p>
         <div class="book-details">
             <strong>Book:</strong> ${bookTitle}<br>
             <strong>Author:</strong> ${bookAuthor}<br>
@@ -59,21 +67,31 @@ const getInquiryEmailHtml = (payload: any) => {
         <div class="message-box">
             <p>${message.replace(/\n/g, '<br>')}</p>
         </div>
+        ${privacyNotice}
     `;
     return getEmailHtml(title, body, 'This is an automated message from the BookDocker GO2 platform.');
 };
 
 const getContactEmailHtml = (payload: any) => {
-    const { expertName, senderEmail, message, links } = payload;
+    const { expertName, message, links, expertEmail } = payload;
     const title = `New Message from a BookDocker GO2 User`;
+    const privacyNotice = `
+      <div style="background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 5px; margin-top: 20px;">
+        <p style="margin: 0; font-weight: bold;">Important Privacy Notice</p>
+        <p style="margin-top: 5px; font-size: 14px;">
+          Replying to this message will reveal your email address (<strong>${expertEmail}</strong>) to the user. As this email is used to log in to your BookDocker GO2 account, please be mindful of this when communicating. We are actively developing a secure, on-platform messaging system to better protect your privacy in the future.
+        </p>
+      </div>
+    `;
     const body = `
         <p>Hello ${expertName},</p>
-        <p>You have received a new message from a user on the platform. You can reply directly to them at: <a href="mailto:${senderEmail}">${senderEmail}</a></p>
+        <p>You have received a new message from a user. Please press "Reply" in your email client to respond to them directly.</p>
         <p><strong>Message:</strong></p>
         <div class="message-box">
             <p>${message.replace(/\n/g, '<br>')}</p>
         </div>
         ${links ? `<p><strong>Shared Links:</strong> ${links}</p>` : ''}
+        ${privacyNotice}
     `;
     return getEmailHtml(title, body, 'This is an automated message from the BookDocker GO2 platform.');
 };
@@ -131,19 +149,21 @@ serve(async (req: Request) => {
       throw new Error('Email service is not configured. Missing API key.');
     }
 
-    let to, subject, html;
+    let to, subject, html, reply_to;
 
     switch (payload.type) {
       case 'inquiry':
         to = payload.expertEmail;
         subject = `Book Inquiry from BookDocker GO2: "${payload.bookTitle}"`;
         html = getInquiryEmailHtml(payload);
+        reply_to = payload.senderEmail;
         break;
 
       case 'contact':
         to = payload.expertEmail;
         subject = `A Message from a BookDocker GO2 User`;
         html = getContactEmailHtml(payload);
+        reply_to = payload.senderEmail;
         break;
 
       case 'feedback':
@@ -161,6 +181,23 @@ serve(async (req: Request) => {
       default:
         throw new Error('Invalid email type specified.');
     }
+    
+    const resendPayload: {
+        from: string;
+        to: string;
+        subject: string;
+        html: string;
+        reply_to?: string;
+    } = {
+        from: FROM_ADDRESS,
+        to,
+        subject,
+        html,
+    };
+
+    if (reply_to) {
+        resendPayload.reply_to = reply_to;
+    }
 
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -168,12 +205,7 @@ serve(async (req: Request) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${resendApiKey}`,
       },
-      body: JSON.stringify({
-        from: FROM_ADDRESS,
-        to,
-        subject,
-        html,
-      }),
+      body: JSON.stringify(resendPayload),
     });
 
     if (!res.ok) {
