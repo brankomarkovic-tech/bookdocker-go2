@@ -3,6 +3,9 @@ import { Expert, BookGenre, WishlistItem, UserRole, UserStatus, Book, Subscripti
 import { getExperts, createExpert, updateExpert, deleteMultipleExperts as apiDeleteMultipleExperts, DuplicateEmailError } from '../services/apiService';
 import { EXAMPLE_EXPERTS } from '../exampleData';
 import { ADMIN_CREDENTIALS, ADMIN_USER_OBJECT } from '../constants';
+import { supabase } from '../supabaseClient';
+import { AuthChangeEvent, Session } from '@supabase/supabase-js';
+
 
 // Define the shape of the context
 interface AppContextType {
@@ -21,7 +24,8 @@ interface AppContextType {
     setGenreFilter: (genre: BookGenre | null) => void;
     isLoading: boolean;
     setIsLoading: (loading: boolean) => void;
-    login: (email: string) => Promise<Expert | null>;
+    sendLoginOtp: (email: string) => Promise<{ error: Error | null }>;
+    verifyLoginOtp: (email: string, token: string) => Promise<{ error: Error | null }>;
     logout: () => void;
     addExpert: (expertData: Omit<Expert, 'id' | 'createdAt' | 'updatedAt' | 'isExample' | 'role' | 'status' | 'subscriptionTier' | 'books' | 'spotlights' | 'onLeave'>) => Promise<boolean>;
     updateExpertProfile: (expertId: string, profileData: Partial<Expert>) => Promise<boolean>;
@@ -65,7 +69,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 console.error("Failed to fetch experts:", error);
                 setExperts(EXAMPLE_EXPERTS); // Fallback to example data
             } finally {
-                setIsLoading(false);
+                // Auth listener will handle setting loading to false
             }
         };
 
@@ -75,13 +79,55 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (storedWishlist) {
             setWishlist(JSON.parse(storedWishlist));
         }
-
-        const storedUser = sessionStorage.getItem('currentUser');
-        if (storedUser) {
-            const user = JSON.parse(storedUser);
-            setCurrentUser(user);
-        }
     }, []);
+
+    // REAL-TIME AUTHENTICATION LISTENER
+    useEffect(() => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event: AuthChangeEvent, session: Session | null) => {
+            setIsLoading(true);
+            const user = session?.user;
+    
+            if (!user) {
+              setCurrentUser(null);
+              sessionStorage.removeItem('currentUser');
+              setView('list');
+            } else {
+              if (user.email?.toLowerCase() === ADMIN_CREDENTIALS.email.toLowerCase()) {
+                const adminUser = ADMIN_USER_OBJECT;
+                setCurrentUser(adminUser);
+                sessionStorage.setItem('currentUser', JSON.stringify(adminUser));
+              } else {
+                // The experts list might not be loaded yet, especially on initial load.
+                // We ensure it is loaded before trying to find the user.
+                let allExperts = experts;
+                if (allExperts.length === 0) {
+                  const dbExperts = await getExperts();
+                  allExperts = [...EXAMPLE_EXPERTS, ...dbExperts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                  setExperts(allExperts);
+                }
+    
+                const loggedInExpert = allExperts.find(e => e.email.toLowerCase() === user.email?.toLowerCase());
+    
+                if (loggedInExpert) {
+                  setCurrentUser(loggedInExpert);
+                  sessionStorage.setItem('currentUser', JSON.stringify(loggedInExpert));
+                } else {
+                  console.error("Authenticated user not found in expert list:", user.email);
+                  // This user is authenticated but has no profile. Log them out.
+                  await supabase.auth.signOut();
+                }
+              }
+            }
+            setIsLoading(false);
+          }
+        );
+    
+        return () => {
+          subscription.unsubscribe();
+        };
+    }, [experts]); // Rerun if experts list changes
+
 
     // NAVIGATION
     const navigateToList = useCallback(() => {
@@ -126,44 +172,62 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, []);
 
     // USER & AUTHENTICATION
-    const login = useCallback(async (email: string): Promise<Expert | null> => {
-        setIsLoading(true);
-        try {
-            const lowerCaseEmail = email.toLowerCase();
-
-            // Special check for the hardcoded administrator
-            if (lowerCaseEmail === ADMIN_CREDENTIALS.email.toLowerCase()) {
-                const adminUser = ADMIN_USER_OBJECT;
-                setCurrentUser(adminUser);
-                sessionStorage.setItem('currentUser', JSON.stringify(adminUser));
-                setView('admin');
-                return adminUser;
+    const sendLoginOtp = async (email: string): Promise<{ error: Error | null }> => {
+        const normalizedEmail = email.toLowerCase().trim();
+        
+        // First attempt: Standard login for existing users.
+        let { error } = await supabase.auth.signInWithOtp({
+            email: normalizedEmail,
+            options: {
+                shouldCreateUser: false,
             }
-
-            // Proceed with normal user login
-            const user = experts.find(e => e.email.toLowerCase() === lowerCaseEmail);
-            if (user) {
-                setCurrentUser(user);
-                sessionStorage.setItem('currentUser', JSON.stringify(user));
-                if (user.role === UserRole.ADMIN) { // Should not happen now, but good to keep
-                    setView('admin');
-                } else {
-                    setView('list');
-                }
-                return user;
+        });
+    
+        // If it fails because signups are not allowed, it means the auth user doesn't exist.
+        // Let's check if they have a profile in our DB.
+        if (error && error.message.includes('Signups not allowed for otp')) {
+            const expertExists = experts.some(e => e.email.toLowerCase() === normalizedEmail);
+    
+            // If a profile exists, this is a user from before the auth fix.
+            // We should "heal" their account by creating an auth user for them.
+            if (expertExists) {
+                console.warn(`Auth user for ${normalizedEmail} not found, but profile exists. Attempting to create auth user to self-heal account.`);
+                // Retry, but this time allow user creation.
+                const { error: creationError } = await supabase.auth.signInWithOtp({
+                    email: normalizedEmail,
+                    options: {
+                        shouldCreateUser: true,
+                    }
+                });
+                // The result of this second call is the one we return.
+                return { error: creationError };
+            } else {
+                // If no profile exists either, then it's a true unknown user.
+                // Provide a more specific error message.
+                return { error: new Error("No account found with this email. Please sign up using the 'Be GO2' button.") };
             }
-            return null;
-        } catch (error) {
-            console.error("Login failed:", error);
-            return null;
-        } finally {
-            setIsLoading(false);
         }
-    }, [experts]);
+    
+        // Return the original error or null if successful.
+        return { error };
+    };
 
-    const logout = useCallback(() => {
-        setCurrentUser(null);
-        sessionStorage.removeItem('currentUser');
+    const verifyLoginOtp = async (email: string, token: string): Promise<{ error: Error | null }> => {
+        const { error } = await supabase.auth.verifyOtp({
+            email: email.toLowerCase().trim(),
+            token: token.trim(),
+            type: 'email',
+        });
+        // The onAuthStateChange listener will handle the successful login.
+        return { error };
+    };
+
+
+    const logout = useCallback(async () => {
+        setIsLoading(true);
+        await supabase.auth.signOut();
+        // The onAuthStateChange listener handles state cleanup.
+        setIsLoading(false);
         setView('list');
     }, []);
 
@@ -183,7 +247,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             const createdExpert = await createExpert(newExpertPayload);
             const updatedExperts = [createdExpert, ...experts];
             setExperts(updatedExperts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-            await login(createdExpert.email);
+            
+            // This is the crucial change. For a new user, we call signInWithOtp
+            // allowing it to create an entry in the Supabase auth table.
+            const { error: otpError } = await supabase.auth.signInWithOtp({
+                email: createdExpert.email.toLowerCase().trim(),
+                options: {
+                    shouldCreateUser: true,
+                }
+            });
+
+            if (otpError) {
+                // This is a critical failure. The profile was created, but the auth user wasn't.
+                // This leaves an orphaned profile. We should ideally roll back the creation.
+                // For now, alerting the user is the simplest fix.
+                console.error("Critical error: Profile created but failed to create auth user:", otpError);
+                alert("Your profile was created, but we failed to create your login account. Please try signing in from the main login page. If the problem persists, contact support.");
+            } else {
+                alert("Profile created! Check your email for a one-time code to log in.");
+            }
             return true;
         } catch (error) {
             console.error("Error adding expert:", error);
@@ -410,7 +492,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setGenreFilter,
         isLoading,
         setIsLoading,
-        login,
+        sendLoginOtp,
+        verifyLoginOtp,
         logout,
         addExpert,
         updateExpertProfile,
