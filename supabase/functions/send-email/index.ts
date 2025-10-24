@@ -51,7 +51,7 @@ const getInquiryEmailHtml = (payload: any) => {
       <div style="background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 5px; margin-top: 20px;">
         <p style="margin: 0; font-weight: bold;">Important Privacy Notice</p>
         <p style="margin-top: 5px; font-size: 14px;">
-          Replying to this message will reveal your email address (<strong>${expertEmail}</strong>) to the user. As this email is used to log in to your BookDocker GO2 account, please be mindful of this when communicating. We are actively developing a secure, on-platform messaging system to better protect your privacy in the future.
+          Replying will reveal your BookDocker GO2 login email (<strong>${expertEmail}</strong>) to this user. For your security, please communicate with caution.
         </p>
       </div>
     `;
@@ -79,7 +79,7 @@ const getContactEmailHtml = (payload: any) => {
       <div style="background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 5px; margin-top: 20px;">
         <p style="margin: 0; font-weight: bold;">Important Privacy Notice</p>
         <p style="margin-top: 5px; font-size: 14px;">
-          Replying to this message will reveal your email address (<strong>${expertEmail}</strong>) to the user. As this email is used to log in to your BookDocker GO2 account, please be mindful of this when communicating. We are actively developing a secure, on-platform messaging system to better protect your privacy in the future.
+          Replying will reveal your BookDocker GO2 login email (<strong>${expertEmail}</strong>) to this user. For your security, please communicate with caution.
         </p>
       </div>
     `;
