@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import FeedbackModal from './FeedbackModal';
 import AudioPlayerModal from './AudioPlayerModal';
+import { useAppContext } from '../hooks/useAppContext';
 
 const Footer: React.FC = () => {
+  const { navigateToTerms, navigateToPrivacy } = useAppContext();
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isAudioPlayerOpen, setIsAudioPlayerOpen] = useState(false);
   const [isFabExtended, setIsFabExtended] = useState(true);
@@ -63,7 +65,12 @@ const Footer: React.FC = () => {
       {/* Footer is now static */}
       <footer className="bg-gray-800 text-white">
         <div className="container mx-auto px-6 py-4 text-center">
-          <p>&copy; {new Date().getFullYear()} BookDocker GO2. All rights reserved.</p>
+            <div className="text-xs text-gray-400 mb-2">
+                By using this Web site, you confirm that you have read, understood, and agreed to be bound by the{' '}
+                <button onClick={navigateToTerms} className="underline hover:text-white transition-colors">
+                    Terms and Conditions
+                </button>.
+            </div>
           <div className="flex justify-center items-center gap-4 mt-1 flex-wrap">
             <p className="text-sm text-gray-400">BETA Version - A meeting point for book lovers.</p>
             <span className="text-gray-500 hidden sm:inline">|</span>
@@ -83,6 +90,16 @@ const Footer: React.FC = () => {
               Tutorials
             </a>
           </div>
+          <div className="flex justify-center items-center gap-4 mt-2 flex-wrap border-t border-gray-700 pt-2">
+            <button onClick={navigateToTerms} className="text-sm text-customBlue-100 hover:text-white hover:underline transition-colors">
+                Terms and Conditions
+            </button>
+            <span className="text-gray-500">|</span>
+             <button onClick={navigateToPrivacy} className="text-sm text-customBlue-100 hover:text-white hover:underline transition-colors">
+                Privacy Policy
+            </button>
+          </div>
+           <p className="text-xs text-gray-500 mt-2">&copy; {new Date().getFullYear()} BookDocker GO2. All rights reserved.</p>
         </div>
       </footer>
 

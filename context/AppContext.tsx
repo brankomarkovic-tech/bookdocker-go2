@@ -12,7 +12,7 @@ interface AppContextType {
     experts: Expert[];
     filteredExperts: Expert[];
     currentUser: Expert | null;
-    view: 'list' | 'profile' | 'admin' | 'title-hive';
+    view: 'list' | 'profile' | 'admin' | 'title-hive' | 'terms' | 'privacy';
     selectedExpertId: string | null;
     wishlist: WishlistItem[];
     isBookInWishlist: (bookId: string) => boolean;
@@ -38,6 +38,8 @@ interface AppContextType {
     navigateToProfile: (expertId: string) => void;
     navigateToAdmin: () => void;
     navigateToTitleHive: () => void;
+    navigateToTerms: () => void;
+    navigateToPrivacy: () => void;
 }
 
 // Create the context with a default undefined value
@@ -48,7 +50,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // STATE MANAGEMENT
     const [experts, setExperts] = useState<Expert[]>([]);
     const [currentUser, setCurrentUser] = useState<Expert | null>(null);
-    const [view, setView] = useState<'list' | 'profile' | 'admin' | 'title-hive'>('list');
+    const [view, setView] = useState<'list' | 'profile' | 'admin' | 'title-hive' | 'terms' | 'privacy'>('list');
     const [selectedExpertId, setSelectedExpertId] = useState<string | null>(null);
     const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -170,6 +172,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const navigateToTitleHive = useCallback(() => {
         setView('title-hive');
     }, []);
+
+    const navigateToTerms = useCallback(() => {
+        setView('terms');
+    }, []);
+
+    const navigateToPrivacy = useCallback(() => {
+        setView('privacy');
+    }, []);
+
 
     // USER & AUTHENTICATION
     const sendLoginOtp = async (email: string): Promise<{ error: Error | null }> => {
@@ -506,6 +517,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         navigateToProfile,
         navigateToAdmin,
         navigateToTitleHive,
+        navigateToTerms,
+        navigateToPrivacy,
     };
 
     return (

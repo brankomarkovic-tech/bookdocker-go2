@@ -168,26 +168,26 @@ export const BuzzIcon: React.FC<{ className?: string }> = ({ className }) => (
             <defs>
                 <mask id="buzzIconMaskFinal">
                     <rect width="24" height="24" fill="white" />
-                    {/* FIX: Changed string literals to numeric JSX expressions. */}
-                    <line x1="15.6" y1="8.336" x2="15.6" y2="15.664" stroke="black" strokeWidth={1.6} strokeLinecap="round" />
-                    <line x1="18.8" y1="8.336" x2="18.8" y2="15.664" stroke="black" strokeWidth={1.6} strokeLinecap="round" />
+                    {/* FIX: Changed string literals to numeric JSX expressions for SVG properties. */}
+                    <line x1={15.6} y1={8.336} x2={15.6} y2={15.664} stroke="black" strokeWidth={1.6} strokeLinecap="round" />
+                    <line x1={18.8} y1={8.336} x2={18.8} y2={15.664} stroke="black" strokeWidth={1.6} strokeLinecap="round" />
                 </mask>
             </defs>
             
             <g>
                 {/* Left circle (outline) */}
-                {/* FIX: Changed string literals to numeric JSX expressions. */}
-                <circle cx="6" cy="12" r={2.05} fill="none" stroke="currentColor" strokeWidth={1.6} />
+                {/* FIX: Changed string literals to numeric JSX expressions for SVG properties. */}
+                <circle cx={6} cy={12} r={2.05} fill="none" stroke="currentColor" strokeWidth={1.6} />
                 
                 {/* Scaled and recentered ellipses (now filled) */}
-                {/* FIX: Changed string literals to numeric JSX expressions. */}
-                <ellipse cx="11.2" cy="8.4" rx={2.08} ry={4.16} fill="currentColor" stroke="none" />
-                <ellipse cx="11.2" cy="15.6" rx={2.08} ry={4.16} fill="currentColor" stroke="none" />
+                {/* FIX: Changed string literals to numeric JSX expressions for SVG properties. */}
+                <ellipse cx={11.2} cy={8.4} rx={2.08} ry={4.16} fill="currentColor" stroke="none" />
+                <ellipse cx={11.2} cy={15.6} rx={2.08} ry={4.16} fill="currentColor" stroke="none" />
             </g>
 
             {/* Scaled and recentered right circle */}
-            {/* FIX: Changed string literal to a numeric JSX expression. */}
-            <circle cx="17.2" cy="12" r={4} fill="currentColor" stroke="none" mask="url(#buzzIconMaskFinal)" />
+            {/* FIX: Changed string literals to numeric JSX expressions for SVG properties. */}
+            <circle cx={17.2} cy={12} r={4} fill="currentColor" stroke="none" mask="url(#buzzIconMaskFinal)" />
         </g>
     </svg>
 );
@@ -201,5 +201,17 @@ export const PlayIcon: React.FC<{ className?: string }> = ({ className }) => (
 export const PauseIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
         <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+    </svg>
+);
+
+export const DocumentTextIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+);
+
+export const UserIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
     </svg>
 );

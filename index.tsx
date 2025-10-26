@@ -12,6 +12,8 @@ import ExpertList from './components/ExpertList';
 import ExpertProfile from './components/ExpertProfile';
 import AdminPanel from './components/AdminPanel';
 import TitleHive from './components/TitleHive';
+import TermsAndConditions from './components/TermsAndConditions';
+import PrivacyPolicy from './components/PrivacyPolicy';
 
 const mainContentStyle = "flex-grow";
 
@@ -25,6 +27,12 @@ const PublicViewManager: React.FC = () => {
     }
     if (view === 'title-hive') {
         return <TitleHive />;
+    }
+    if (view === 'terms') {
+        return <TermsAndConditions />;
+    }
+    if (view === 'privacy') {
+        return <PrivacyPolicy />;
     }
     return <ExpertList />;
 };
