@@ -14,11 +14,11 @@ export const EXAMPLE_EXPERTS: Expert[] = [
         avatarUrl: 'https://i.pravatar.cc/150?u=dr-aris-thorne-v2',
         onLeave: true,
         books: [
-            { id: 'book-p1-1', title: 'Dune', author: 'Frank Herbert', year: 1965, status: BookStatus.AVAILABLE, price: 75, currency: 'USD', imageUrl: 'https://picsum.photos/seed/dune/200/300', addedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
-            { id: 'book-p1-2', title: 'Foundation', author: 'Isaac Asimov', year: 1951, status: BookStatus.AVAILABLE, price: 60, currency: 'USD', imageUrl: 'https://picsum.photos/seed/foundation/200/300', addedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
-            { id: 'book-p1-3', title: 'Neuromancer', author: 'William Gibson', year: 1984, status: BookStatus.AVAILABLE, price: 85, currency: 'USD', imageUrl: 'https://picsum.photos/seed/neuromancer/200/300', addedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
-            { id: 'book-p1-4', title: 'Hyperion', author: 'Dan Simmons', year: 1989, status: BookStatus.SOLD, price: 50, currency: 'USD', imageUrl: 'https://picsum.photos/seed/hyperion/200/300', addedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString() },
-            { id: 'book-p1-5', title: 'The Left Hand of Darkness', author: 'Ursula K. Le Guin', year: 1969, status: BookStatus.RESERVED, price: 45, currency: 'USD', imageUrl: 'https://picsum.photos/seed/lefthand/200/300', addedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
+            { id: 'book-p1-1', title: 'Dune', author: 'Frank Herbert', year: 1965, status: BookStatus.AVAILABLE, price: 75, currency: 'USD', imageUrl: 'https://covers.openlibrary.org/b/id/10313839-L.jpg', addedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
+            { id: 'book-p1-2', title: 'Foundation', author: 'Isaac Asimov', year: 1951, status: BookStatus.AVAILABLE, price: 60, currency: 'USD', imageUrl: 'https://covers.openlibrary.org/b/id/12918805-L.jpg', addedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
+            { id: 'book-p1-3', title: 'Neuromancer', author: 'William Gibson', year: 1984, status: BookStatus.AVAILABLE, price: 85, currency: 'USD', imageUrl: 'https://covers.openlibrary.org/b/id/12696113-L.jpg', addedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
+            { id: 'book-p1-4', title: 'Hyperion', author: 'Dan Simmons', year: 1989, status: BookStatus.SOLD, price: 50, currency: 'USD', imageUrl: 'https://covers.openlibrary.org/b/id/12696011-L.jpg', addedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString() },
+            { id: 'book-p1-5', title: 'The Left Hand of Darkness', author: 'Ursula K. Le Guin', year: 1969, status: BookStatus.RESERVED, price: 45, currency: 'USD', imageUrl: 'https://covers.openlibrary.org/b/id/10539163-L.jpg', addedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
         ],
         spotlights: [
             { 
@@ -55,9 +55,9 @@ export const EXAMPLE_EXPERTS: Expert[] = [
         avatarUrl: 'https://i.pravatar.cc/150?u=marco-verratti',
         onLeave: false,
         books: [
-            { id: 'book-p2-1', title: 'SPQR: A History of Ancient Rome', author: 'Mary Beard', year: 2015, status: BookStatus.AVAILABLE, price: 35, currency: 'USD', imageUrl: 'https://picsum.photos/seed/spqr/200/300', addedAt: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString() },
-            { id: 'book-p2-2', title: 'The Swerve: How the World Became Modern', author: 'Stephen Greenblatt', year: 2011, status: BookStatus.AVAILABLE, price: 25, currency: 'USD', imageUrl: 'https://picsum.photos/seed/swerve/200/300', addedAt: new Date(Date.now() - 2.5 * 24 * 60 * 60 * 1000).toISOString() },
-            { id: 'book-p2-3', title: 'Rubicon: The Last Years of the Roman Republic', author: 'Tom Holland', year: 2003, status: BookStatus.AVAILABLE, price: 30, currency: 'USD', imageUrl: 'https://picsum.photos/seed/rubicon/200/300', addedAt: new Date(Date.now() - 3.5 * 24 * 60 * 60 * 1000).toISOString() },
+            { id: 'book-p2-1', title: 'SPQR: A History of Ancient Rome', author: 'Mary Beard', year: 2015, status: BookStatus.AVAILABLE, price: 35, currency: 'USD', imageUrl: 'https://covers.openlibrary.org/b/id/12607425-L.jpg', addedAt: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString() },
+            { id: 'book-p2-2', title: 'The Swerve: How the World Became Modern', author: 'Stephen Greenblatt', year: 2011, status: BookStatus.AVAILABLE, price: 25, currency: 'USD', imageUrl: 'https://covers.openlibrary.org/b/id/6988863-L.jpg', addedAt: new Date(Date.now() - 2.5 * 24 * 60 * 60 * 1000).toISOString() },
+            { id: 'book-p2-3', title: 'Rubicon: The Last Years of the Roman Republic', author: 'Tom Holland', year: 2003, status: BookStatus.AVAILABLE, price: 30, currency: 'USD', imageUrl: 'https://covers.openlibrary.org/b/id/10459588-L.jpg', addedAt: new Date(Date.now() - 3.5 * 24 * 60 * 60 * 1000).toISOString() },
         ],
         spotlights: [
             {
@@ -93,15 +93,15 @@ export const EXAMPLE_EXPERTS: Expert[] = [
         avatarUrl: 'https://i.pravatar.cc/150?u=kenji-tanaka-v2',
         onLeave: true,
         books: [
-            { id: 'book-p3-1', title: 'The Great Wave: The Influence of Japanese Woodcuts on French Prints', author: 'Colta Feller Ives', year: 1974, status: BookStatus.AVAILABLE, price: 120, currency: 'USD', imageUrl: 'https://picsum.photos/seed/greatwave/200/300', addedAt: new Date(Date.now() - 0.5 * 24 * 60 * 60 * 1000).toISOString() },
-            { id: 'book-p3-2', title: 'Japanese Art', author: 'Joan Stanley-Baker', year: 2000, status: BookStatus.AVAILABLE, price: 40, currency: 'USD', imageUrl: 'https://picsum.photos/seed/japaneseart/200/300', addedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString() },
-            { id: 'book-p3-3', title: 'In Praise of Shadows', author: 'Junichiro Tanizaki', year: 1933, status: BookStatus.AVAILABLE, price: 55, currency: 'USD', imageUrl: 'https://picsum.photos/seed/shadows/200/300', addedAt: new Date(Date.now() - 6.5 * 24 * 60 * 60 * 1000).toISOString() },
+            { id: 'book-p3-1', title: 'Hokusai: Prints and Drawings', author: 'Matthi Forrer', year: 2010, status: BookStatus.AVAILABLE, price: 120, currency: 'USD', imageUrl: 'https://covers.openlibrary.org/b/id/10313133-L.jpg', addedAt: new Date(Date.now() - 0.5 * 24 * 60 * 60 * 1000).toISOString() },
+            { id: 'book-p3-2', title: 'Japanese Art', author: 'Joan Stanley-Baker', year: 2000, status: BookStatus.AVAILABLE, price: 40, currency: 'USD', imageUrl: 'https://covers.openlibrary.org/b/id/8306359-L.jpg', addedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString() },
+            { id: 'book-p3-3', title: 'In Praise of Shadows', author: 'Junichiro Tanizaki', year: 1933, status: BookStatus.AVAILABLE, price: 55, currency: 'USD', imageUrl: 'https://covers.openlibrary.org/b/id/10471101-L.jpg', addedAt: new Date(Date.now() - 6.5 * 24 * 60 * 60 * 1000).toISOString() },
         ],
         spotlights: [
             {
                 id: 'spotlight-p3-1',
                 title: "Hokusai's Enduring Ripple",
-                content: "The Great Wave off Kanagawa is arguably the most famous image in Japanese art, but its influence extends far beyond the shores of Japan. This spotlight, featuring Colta Feller Ives' seminal work, explores how Ukiyo-e prints like Hokusai's transformed Western art, inspiring the Impressionists and shaping the course of modernism. A true bridge between two cultures.",
+                content: "The Great Wave off Kanagawa is arguably the most famous image in Japanese art, but its influence extends far beyond the shores of Japan. This spotlight, featuring Matthi Forrer's seminal work, explores how Ukiyo-e prints like Hokusai's transformed Western art, inspiring the Impressionists and shaping the course of modernism. A true bridge between two cultures.",
                 featuredBookId: 'book-p3-1',
                 audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
             },
