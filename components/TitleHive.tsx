@@ -27,12 +27,6 @@ const BuzzCard: React.FC<BuzzCardProps> = ({ expert }) => {
             <BuzzIcon className="absolute top-1 left-1 w-6 h-6 text-white" />
         </div>
         
-        {expert.isExample && (
-            <div
-                className="absolute inset-0 bg-customBlue-600 bg-opacity-10 pointer-events-none"
-            ></div>
-        )}
-
         <div className="w-full h-full flex flex-col items-center">
             <img className="w-16 h-16 rounded-full object-cover shadow-sm ring-2 ring-customBlue-100 mb-3" src={expert.avatarUrl} alt={expert.name} />
             
@@ -49,11 +43,6 @@ const BuzzCard: React.FC<BuzzCardProps> = ({ expert }) => {
                 <p className="text-xs text-gray-600 truncate" title={expert.bookQuery.author}>by {expert.bookQuery.author}</p>
             </div>
         </div>
-        {expert.isExample && (
-          <div className="absolute bottom-2 right-2 bg-customBlue-600 bg-opacity-75 text-white text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm">
-              Example
-          </div>
-        )}
       </div>
     );
 };

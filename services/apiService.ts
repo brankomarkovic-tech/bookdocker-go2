@@ -42,7 +42,7 @@ const deepTransformKeys = (obj: any, transform: (key: string) => string): any =>
 
 const mapToDbExpert = (expertData: Partial<Expert>): any => {
     // Exclude keys that are managed by the app/db or are not columns
-    const { id, createdAt, updatedAt, isExample, ...rest } = expertData;
+    const { id, createdAt, updatedAt, ...rest } = expertData;
     return deepTransformKeys(rest, toSnakeCase);
 };
 
@@ -74,7 +74,7 @@ export const getExperts = async (signal?: AbortSignal): Promise<Expert[]> => {
   }
 };
 
-export const createExpert = async (expertData: Omit<Expert, 'id' | 'createdAt' | 'isExample' | 'updatedAt'>): Promise<Expert> => {
+export const createExpert = async (expertData: Omit<Expert, 'id' | 'createdAt' | 'updatedAt'>): Promise<Expert> => {
   try {
     const { data: existing } = await supabase
       .from('experts')
@@ -95,7 +95,6 @@ export const createExpert = async (expertData: Omit<Expert, 'id' | 'createdAt' |
   const mappedData = mapToDbExpert({
       ...expertData,
       createdAt: new Date().toISOString(),
-      isExample: false,
   });
 
   // Then, generate a new ID and add it to the mapped object.

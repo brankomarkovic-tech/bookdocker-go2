@@ -220,7 +220,6 @@ const UserManagement: React.FC = () => {
                                                         <div className="ml-4">
                                                             <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
                                                                 {expert.name}
-                                                                {expert.isExample && <span className="text-xs font-bold text-customBlue-600 bg-customBlue-100 px-2 py-0.5 rounded-full">Example</span>}
                                                             </div>
                                                             <div className="text-sm text-gray-500">{expert.email}</div>
                                                         </div>
@@ -276,7 +275,6 @@ const UserManagement: React.FC = () => {
                                                     <div className="ml-4">
                                                          <div className="text-sm font-medium text-gray-900 flex items-center gap-2">
                                                             {user.name}
-                                                            {user.isExample && <span className="text-xs font-bold text-customBlue-600 bg-customBlue-100 px-2 py-0.5 rounded-full">Example</span>}
                                                         </div>
                                                         <div className="text-sm text-gray-500">{user.email}</div>
                                                     </div>

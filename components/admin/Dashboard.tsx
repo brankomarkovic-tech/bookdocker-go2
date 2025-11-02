@@ -25,8 +25,7 @@ const Dashboard: React.FC = () => {
     const { experts } = useAppContext();
 
     const stats = useMemo(() => {
-        // IMPORTANT: Filter out dummy users to ensure stats only reflect real, manageable database users.
-        const platformExperts = experts.filter(e => e.role === UserRole.EXPERT && !e.id.startsWith('premium-user-'));
+        const platformExperts = experts.filter(e => e.role === UserRole.EXPERT);
         const totalExperts = platformExperts.length;
         const premiumExperts = platformExperts.filter(e => e.subscriptionTier === SubscriptionTier.PREMIUM).length;
         
@@ -48,10 +47,9 @@ const Dashboard: React.FC = () => {
         return { totalExperts, premiumExperts, soldBooks, availableBooks, genreDistribution };
     }, [experts]);
     
-    // The main `experts` list is already sorted newest-first. We just need to filter out dummy users.
     const recentExperts = useMemo(() => {
         return experts
-            .filter(e => e.role === UserRole.EXPERT && !e.id.startsWith('premium-user-'))
+            .filter(e => e.role === UserRole.EXPERT)
             .slice(0, 5);
     }, [experts]);
 

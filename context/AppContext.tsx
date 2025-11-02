@@ -1,7 +1,6 @@
 import React, { createContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import { Expert, BookGenre, WishlistItem, UserRole, UserStatus, Book, SubscriptionTier, BookStatus } from '../types';
 import { getExperts, createExpert, updateExpert, deleteMultipleExperts as apiDeleteMultipleExperts, DuplicateEmailError } from '../services/apiService';
-import { EXAMPLE_EXPERTS } from '../exampleData';
 import { ADMIN_CREDENTIALS, ADMIN_USER_OBJECT } from '../constants';
 import { supabase } from '../supabaseClient';
 import { AuthChangeEvent, Session } from '@supabase/supabase-js';
@@ -27,7 +26,7 @@ interface AppContextType {
     sendLoginOtp: (email: string) => Promise<{ error: Error | null }>;
     verifyLoginOtp: (email: string, token: string) => Promise<{ error: Error | null }>;
     logout: () => void;
-    addExpert: (expertData: Omit<Expert, 'id' | 'createdAt' | 'updatedAt' | 'isExample' | 'role' | 'status' | 'subscriptionTier' | 'books' | 'spotlights' | 'onLeave'>) => Promise<boolean>;
+    addExpert: (expertData: Omit<Expert, 'id' | 'createdAt' | 'updatedAt' | 'role' | 'status' | 'subscriptionTier' | 'books' | 'spotlights' | 'onLeave'>) => Promise<boolean>;
     updateExpertProfile: (expertId: string, profileData: Partial<Expert>) => Promise<boolean>;
     updateExpertBooks: (expertId: string, books: Book[]) => Promise<void>;
     updateExpertStatus: (expertId: string, status: UserStatus) => Promise<void>;
@@ -65,11 +64,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             setIsLoading(true);
             try {
                 const dbExperts = await getExperts();
-                const combinedExperts = [...EXAMPLE_EXPERTS, ...dbExperts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-                setExperts(combinedExperts);
+                setExperts(dbExperts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
             } catch (error) {
                 console.error("Failed to fetch experts:", error);
-                setExperts(EXAMPLE_EXPERTS); // Fallback to example data
+                setExperts([]); // Fallback to empty array on error
             } finally {
                 // Auth listener will handle setting loading to false
             }
@@ -105,7 +103,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 let allExperts = experts;
                 if (allExperts.length === 0) {
                   const dbExperts = await getExperts();
-                  allExperts = [...EXAMPLE_EXPERTS, ...dbExperts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                  allExperts = dbExperts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
                   setExperts(allExperts);
                 }
     
@@ -186,6 +184,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const sendLoginOtp = async (email: string): Promise<{ error: Error | null }> => {
         const normalizedEmail = email.toLowerCase().trim();
         
+        if (normalizedEmail === ADMIN_CREDENTIALS.email.toLowerCase()) {
+            // For the admin, we always allow user creation. If the auth user doesn't exist,
+            // this will create it. If it exists, it will just send the OTP. This makes the
+            // admin login robust across different environments.
+            const { error } = await supabase.auth.signInWithOtp({
+                email: normalizedEmail,
+                options: { shouldCreateUser: true }
+            });
+            // The onAuthStateChange listener will handle the successful login.
+            return { error };
+        }
+        
         // First attempt: Standard login for existing users.
         let { error } = await supabase.auth.signInWithOtp({
             email: normalizedEmail,
@@ -243,10 +253,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, []);
 
     // EXPERT DATA MANAGEMENT
-    const addExpert = async (expertData: Omit<Expert, 'id' | 'createdAt' | 'updatedAt' | 'isExample' | 'role' | 'status' | 'subscriptionTier' | 'books' | 'spotlights' | 'onLeave'>): Promise<boolean> => {
+    const addExpert = async (expertData: Omit<Expert, 'id' | 'createdAt' | 'updatedAt' | 'role' | 'status' | 'subscriptionTier' | 'books' | 'spotlights' | 'onLeave'>): Promise<boolean> => {
         setIsLoading(true);
         try {
-            const newExpertPayload: Omit<Expert, 'id' | 'createdAt' | 'updatedAt' | 'isExample'> = {
+            const newExpertPayload: Omit<Expert, 'id' | 'createdAt' | 'updatedAt'> = {
                 ...expertData,
                 role: UserRole.EXPERT,
                 status: UserStatus.ACTIVE,
@@ -292,29 +302,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     
     const updateExpertProfile = async (expertId: string, profileData: Partial<Expert>): Promise<boolean> => {
-        const expertToUpdate = experts.find(e => e.id === expertId);
-        if (!expertToUpdate) {
-            console.error("Cannot update profile, expert not found in state:", expertId);
-            alert("An error occurred while updating the profile.");
-            return false;
-        }
-    
-        // If the user is an example user, update the state locally and do not call the API.
-        if (expertToUpdate.isExample) {
-            const updatedExampleExpert = { ...expertToUpdate, ...profileData, updatedAt: new Date().toISOString() };
-            setExperts(prevExperts => {
-                const newExperts = prevExperts.map(e => e.id === expertId ? updatedExampleExpert : e);
-                return newExperts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            });
-            if (currentUser?.id === expertId) {
-                const updatedCurrentUser = { ...currentUser, ...profileData };
-                setCurrentUser(updatedCurrentUser);
-                sessionStorage.setItem('currentUser', JSON.stringify(updatedCurrentUser));
-            }
-            return true;
-        }
-        
-        // For real users, proceed with the API call as before.
         setUpdatingExpertIds(prev => new Set(prev).add(expertId));
         try {
             const updatedExpert = await updateExpert(expertId, profileData);
@@ -384,23 +371,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const oldBookIds = new Set((expertToUpdate.books || []).map(b => b.id));
         const newBooks = books.filter(b => !oldBookIds.has(b.id) && b.status === BookStatus.AVAILABLE);
 
-        // If the user is an example user, handle the update locally.
-        if (expertToUpdate.isExample) {
-            const profileData = { books };
-            const updatedExampleExpert = { ...expertToUpdate, ...profileData, updatedAt: new Date().toISOString() };
-            setExperts(prevExperts => prevExperts.map(e => e.id === expertId ? updatedExampleExpert : e));
-            
-            if (currentUser?.id === expertId) {
-                const updatedCurrentUser = { ...currentUser, ...profileData };
-                setCurrentUser(updatedCurrentUser);
-                sessionStorage.setItem('currentUser', JSON.stringify(updatedCurrentUser));
-            }
-            // Run the alert agent on the locally updated data.
-            runAlertAgent(updatedExampleExpert, newBooks);
-            return;
-        }
-
-        // For real users, call the API.
         const success = await updateExpertProfile(expertId, { books });
 
         // Run the alert agent after a successful database update.
@@ -413,28 +383,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     const updateExpertStatus = async (expertId: string, status: UserStatus) => {
-        const expert = experts.find(e => e.id === expertId);
-        if (expert?.isExample) {
-            console.warn("Cannot change status of an example user.");
-            return;
-        }
         await updateExpertProfile(expertId, { status });
     };
 
     const deleteMultipleExperts = async (expertIds: string[]) => {
-        const realIdsToDelete = expertIds.filter(id => {
-            const expert = experts.find(e => e.id === id);
-            return expert && !expert.isExample;
-        });
-
-        if (realIdsToDelete.length === 0) {
-             setExperts(prev => prev.filter(e => !expertIds.includes(e.id)));
-             return;
-        }
+        if (expertIds.length === 0) return;
 
         setIsErasing(true);
         try {
-            await apiDeleteMultipleExperts(realIdsToDelete);
+            await apiDeleteMultipleExperts(expertIds);
             setExperts(prev => prev.filter(e => !expertIds.includes(e.id)));
         } catch (error) {
             console.error("Failed to delete experts:", error);

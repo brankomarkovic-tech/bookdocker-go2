@@ -21,7 +21,6 @@ export const ADMIN_USER_OBJECT: Expert = {
     books: [],
     spotlights: [],
     createdAt: new Date().toISOString(),
-    isExample: false, // This is a real system account, not an example.
 };
 
 // Subscription Tier Limits

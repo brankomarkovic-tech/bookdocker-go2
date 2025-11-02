@@ -53,11 +53,6 @@ const ExpertCard: React.FC<ExpertCardProps> = ({ expert }) => {
 
         <p className="text-gray-600 mt-4 text-sm line-clamp-4 flex-grow">{expert.bio}</p>
       </div>
-       {expert.isExample && (
-        <div className="absolute bottom-3 right-3 bg-customBlue-600 bg-opacity-75 text-white text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md">
-            Example
-        </div>
-      )}
     </div>
   );
 };

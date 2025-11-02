@@ -1,6 +1,3 @@
-
-
-
 export enum BookGenre {
   AGRICULTURE = "Agriculture",
   AI = "AI",
@@ -207,7 +204,6 @@ export interface Expert {
   presentOffer?: PresentOffer;
   createdAt: string;
   updatedAt?: string;
-  isExample: boolean;
 }
 
 export interface WishlistItem {

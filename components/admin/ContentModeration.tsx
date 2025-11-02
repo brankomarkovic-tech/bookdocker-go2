@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAppContext } from '../../hooks/useAppContext';
 import { scanContentForIssues } from '../../services/geminiService';
-import { ModerationAlert, UserStatus } from '../../types';
+import { ModerationAlert, UserRole, UserStatus } from '../../types';
 import { ShieldCheckIcon, ShieldExclamationIcon, TrashIcon } from '../icons';
 
 const ContentModeration: React.FC = () => {
@@ -18,7 +18,7 @@ const ContentModeration: React.FC = () => {
         setScanPerformed(true);
         setSelectedExpertIds(new Set());
         try {
-            const manageableExperts = experts.filter(e => !e.isExample);
+            const manageableExperts = experts.filter(e => e.role === UserRole.EXPERT);
             const results = await scanContentForIssues(manageableExperts);
             setAlerts(results);
         } catch (err) {

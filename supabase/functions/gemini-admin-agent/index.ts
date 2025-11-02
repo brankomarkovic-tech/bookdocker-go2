@@ -7,7 +7,7 @@ import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { GoogleGenAI, Type } from 'https://esm.sh/@google/genai@^1.21.0';
 
 // Import shared types from the project root.
-import { Expert, ModerationAlert, BookStatus, SubscriptionTier } from '../../../types.ts';
+import { Expert, ModerationAlert, BookStatus, SubscriptionTier, UserRole } from '../../../types.ts';
 
 /**
  * Handles 'scanContentForIssues' requests.
@@ -118,7 +118,7 @@ async function handleGetAdminInsights(ai: GoogleGenAI, query: string, experts: E
     if (!experts) throw new Error("Experts data is required for insights.");
 
     // Pre-process data into a tiny summary to prevent timeouts.
-    const platformExperts = experts.filter(e => !e.isExample);
+    const platformExperts = experts.filter(e => e.role === UserRole.EXPERT);
     const allBooks = platformExperts.flatMap(e => e.books || []);
     const genreCounts = platformExperts.reduce((acc, e) => {
         acc[e.genre] = (acc[e.genre] || 0) + 1;

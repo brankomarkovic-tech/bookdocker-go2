@@ -101,7 +101,7 @@ const ExpertProfile: React.FC = () => {
     );
   }
 
-  const { name, genre, bio, avatarUrl, email, books, spotlights, country, socialLinks, bookQuery, onLeave, subscriptionTier, isExample, presentOffer } = selectedExpert;
+  const { name, genre, bio, avatarUrl, email, books, spotlights, country, socialLinks, bookQuery, onLeave, subscriptionTier, presentOffer } = selectedExpert;
   const isOwner = currentUser?.id === selectedExpert.id;
   
   const presentBook = useMemo(() => {
@@ -437,11 +437,6 @@ const ExpertProfile: React.FC = () => {
               
             </div>
           </div>
-          {isExample && (
-            <div className="absolute bottom-3 right-3 bg-customBlue-600 bg-opacity-75 text-white text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md">
-                Example
-            </div>
-          )}
         </div>
 
         {spotlights && spotlights.length > 0 && (
