@@ -72,7 +72,7 @@ const Footer: React.FC = () => {
                 </button>.
             </div>
           <div className="flex justify-center items-center gap-4 mt-1 flex-wrap">
-            <p className="text-sm text-gray-400">BETA Version - A meeting point for book lovers.</p>
+            <p className="text-sm text-gray-400">A meeting point for book lovers.</p>
             <span className="text-gray-500 hidden sm:inline">|</span>
             <button
               onClick={() => setIsFeedbackModalOpen(true)}

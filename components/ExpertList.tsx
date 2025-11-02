@@ -245,11 +245,11 @@ const faqData: { question: string; answer: string | React.ReactNode }[] = [
   },
   {
     question: 'Is it free to join?',
-    answer: 'Yes, creating a GO2 Expert profile and listing your books is completely free during our BETA phase. We believe in building a community first. After the BETA period concludes, the users may receive a complimentary 30-day trial of the service, after which they will be able to select a subscription plan, which involves monthly fees that are billed on an annual basis.',
+    answer: 'Yes, creating a GO2 Expert profile and listing your books is completely free. However, the users are able to select a Premium subscription plan, which involves monthly fees that are billed on an annual basis.',
   },
   {
     question: 'Is there a limit to how many books I can list?',
-    answer: 'Yes, during our BETA phase you can list up to 35 books that are available for buying. Once you sell one, you can add one too, as long you fit the limit of 35 books or printed editions. We encourage showcasing curated, quality collections.',
+    answer: 'Yes, within the Free Tier, you can list up to 35 books that are available for buying. Once you sell one, you can add one too, as long you fit the limit of 35 books or printed editions. Choosing Premium plan, among other available Premium tools, you will be able to list up to 150 books. We encourage showcasing curated, quality collections.',
   },
   {
     question: 'What are some useful hints before purchasing a book?',
@@ -289,8 +289,8 @@ const faqData: { question: string; answer: string | React.ReactNode }[] = [
     ),
   },
   {
-    question: 'What will Premium subscription bring? (A Sneak Peak)',
-    answer: 'Being a dedicated expert collector, you may find that you want to manage your collection on your own, directly, without a mediator or dealer. This is where the BookDocker GO2 Premium Toolkit steps in, allowing you to foster and grow your collection or use it as an earning tool. Be creative!',
+    question: 'What Premium subscription brings?',
+    answer: 'The BookDocker GO2 Premium Toolkit brings advanced options allowing you to foster and grow your collection or use it as an earning tool. For details check out the “Go Premium" Page.',
   },
 ];
 
