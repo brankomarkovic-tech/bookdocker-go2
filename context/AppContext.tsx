@@ -28,6 +28,7 @@ interface AppContextType {
     logout: () => void;
     addExpert: (expertData: Omit<Expert, 'id' | 'createdAt' | 'updatedAt' | 'role' | 'status' | 'subscriptionTier' | 'books' | 'spotlights' | 'onLeave'>) => Promise<boolean>;
     updateExpertProfile: (expertId: string, profileData: Partial<Expert>) => Promise<boolean>;
+    refreshCurrentUser: (updatedUser: Expert) => void;
     updateExpertBooks: (expertId: string, books: Book[]) => Promise<void>;
     updateExpertStatus: (expertId: string, status: UserStatus) => Promise<void>;
     deleteMultipleExperts: (expertIds: string[]) => Promise<void>;
@@ -332,6 +333,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             });
         }
     };
+
+    const refreshCurrentUser = useCallback((updatedUser: Expert) => {
+        setExperts(prevExperts => {
+            const newExperts = prevExperts.map(e => e.id === updatedUser.id ? updatedUser : e);
+            return newExperts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        });
+        setCurrentUser(updatedUser);
+        sessionStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    }, []);
     
     const runAlertAgent = (updatedExpert: Expert, newBooks: Book[]) => {
         if (newBooks.length === 0) return;
@@ -470,6 +480,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         logout,
         addExpert,
         updateExpertProfile,
+        refreshCurrentUser,
         updateExpertBooks,
         updateExpertStatus,
         deleteMultipleExperts,

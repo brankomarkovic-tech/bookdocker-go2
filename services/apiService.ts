@@ -198,3 +198,20 @@ export const invokeGeminiAdminAgent = async (payload: object): Promise<any> => {
 
     return data;
 };
+
+export const invokePayPalHandler = async (payload: object): Promise<any> => {
+    const { data, error } = await supabase.functions.invoke('paypal-handler', {
+        body: payload,
+    });
+
+    if (error) {
+        console.error("Error invoking paypal-handler function:", error);
+        throw new Error(`Payment processing error: ${error.message}`);
+    }
+
+    if (data?.error) {
+        throw new Error(`Payment processing error: ${data.error}`);
+    }
+
+    return data;
+};
