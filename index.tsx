@@ -14,6 +14,7 @@ import AdminPanel from './components/AdminPanel';
 import TitleHive from './components/TitleHive';
 import TermsAndConditions from './components/TermsAndConditions';
 import PrivacyPolicy from './components/PrivacyPolicy';
+import GoPremium from './components/GoPremium';
 
 const mainContentStyle = "flex-grow";
 
@@ -33,6 +34,9 @@ const PublicViewManager: React.FC = () => {
     }
     if (view === 'privacy') {
         return <PrivacyPolicy />;
+    }
+    if (view === 'go-premium') {
+        return <GoPremium />;
     }
     return <ExpertList />;
 };

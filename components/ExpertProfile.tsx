@@ -25,7 +25,7 @@ const ChevronRightIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 
 const ExpertProfile: React.FC = () => {
-  const { experts, selectedExpertId, navigateToList, isBookInWishlist, addToWishlist, removeFromWishlist, currentUser } = useAppContext();
+  const { experts, selectedExpertId, navigateToList, isBookInWishlist, addToWishlist, removeFromWishlist, currentUser, navigateToPremium } = useAppContext();
 
   const selectedExpert = useMemo(() => {
     return experts.find(e => e.id === selectedExpertId);
@@ -103,6 +103,7 @@ const ExpertProfile: React.FC = () => {
 
   const { name, genre, bio, avatarUrl, email, books, spotlights, country, socialLinks, bookQuery, onLeave, subscriptionTier, presentOffer } = selectedExpert;
   const isOwner = currentUser?.id === selectedExpert.id;
+  const isFreeTierOwner = isOwner && subscriptionTier === SubscriptionTier.FREE;
   
   const presentBook = useMemo(() => {
     if (!presentOffer || !books) return null;
@@ -283,6 +284,25 @@ const ExpertProfile: React.FC = () => {
             Back to all experts
           </button>
         </div>
+
+        {isFreeTierOwner && (
+          <div className="mb-8 p-6 bg-yellow-400 text-yellow-900 rounded-lg shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <SparklesIcon className="w-10 h-10 flex-shrink-0" />
+              <div>
+                <h3 className="font-extrabold text-xl">Unlock Premium Features!</h3>
+                <p className="text-sm">Increase your book limit, get more spotlights, create special offers, and more.</p>
+              </div>
+            </div>
+            <button
+              onClick={navigateToPremium}
+              className="bg-white text-yellow-900 font-bold py-2 px-6 rounded-lg hover:bg-yellow-50 transition duration-300 w-full sm:w-auto flex-shrink-0"
+            >
+              Upgrade Now
+            </button>
+          </div>
+        )}
+
 
         {onLeave && (
             <div className="mb-8 p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded-md flex items-center gap-3">
@@ -531,7 +551,7 @@ const ExpertProfile: React.FC = () => {
                   {(books?.length || 0) > 0 && (
                       <div className="relative w-full sm:w-auto">
                           <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <SearchIcon className="h-5 w-5 text-gray-400" />
+                            <SearchIcon className="h-5 h-5 text-gray-400" />
                           </span>
                           <input
                             type="text"

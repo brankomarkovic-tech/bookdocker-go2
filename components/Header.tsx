@@ -1,16 +1,14 @@
-
-
 import React, { useState } from 'react';
 import { useAppContext } from '../hooks/useAppContext';
 import ProfileForm from './ProfileForm';
-import { UserRole, Expert } from '../types';
+import { UserRole, Expert, SubscriptionTier } from '../types';
 import { Logo } from './Logo';
 import WishlistModal from './WishlistModal';
-import { HeartIcon, HoneycombIcon } from './icons';
+import { HeartIcon, HoneycombIcon, SparklesIcon } from './icons';
 import LoginModal from './LoginModal';
 
 const Header: React.FC = () => {
-  const { wishlist, currentUser, logout, navigateToList, navigateToAdmin, navigateToTitleHive } = useAppContext();
+  const { wishlist, currentUser, logout, navigateToList, navigateToAdmin, navigateToTitleHive, navigateToPremium } = useAppContext();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -33,6 +31,8 @@ const Header: React.FC = () => {
     
     return nameParts[0];
   };
+
+  const isFreeTierExpert = currentUser?.role === UserRole.EXPERT && currentUser?.subscriptionTier === SubscriptionTier.FREE;
 
   return (
     <>
@@ -83,6 +83,15 @@ const Header: React.FC = () => {
                         Admin Panel
                     </button>
                   )}
+                   {isFreeTierExpert && (
+                        <button
+                            onClick={navigateToPremium}
+                            className="flex items-center gap-2 bg-yellow-400 text-yellow-900 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition duration-300"
+                        >
+                            <SparklesIcon className="w-5 h-5" />
+                            Go Premium
+                        </button>
+                    )}
                   <button
                       onClick={logout}
                       className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition duration-300"
