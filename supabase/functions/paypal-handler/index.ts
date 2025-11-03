@@ -114,8 +114,8 @@ serve(async (req: Request) => {
                     { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
                 );
                 const { data: { user } } = await supabaseClient.auth.getUser();
-                if (!user) {
-                    throw new Error("User not authenticated.");
+                if (!user || !user.email) {
+                    throw new Error("User not authenticated or email is missing.");
                 }
 
                 const accessToken = await getPayPalAccessToken();
@@ -149,7 +149,7 @@ serve(async (req: Request) => {
                     const { data: updatedExpert, error: updateError } = await supabaseAdmin
                         .from('experts')
                         .update({ subscription_tier: 'premium' })
-                        .eq('id', user.id)
+                        .eq('email', user.email) // FIX: Use email to find the user, not ID.
                         .select()
                         .single();
 
