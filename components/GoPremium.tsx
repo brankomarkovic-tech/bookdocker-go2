@@ -14,7 +14,7 @@ declare global {
 
 // Use a sandbox client ID for testing. Replace with a real one in production.
 // This should ideally come from an environment variable.
-const PAYPAL_CLIENT_ID = "test"; 
+const PAYPAL_CLIENT_ID = "ARCn0f2JA66Sbsj72noeFPyD7C2hQQNGVbhrCWdWHnEIqO-GJ205dGECHuyYdsWlOWsaUhFgeqZDWnZV"; 
 
 interface PayPalPaymentProps {
     onSuccess: (updatedUser: Expert) => void;
