@@ -1,83 +1,62 @@
-import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { Expert, Book, WishlistItem, UserRole } from '../types';
+import React, { createContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
+import { Expert, BookGenre, WishlistItem, UserRole, UserStatus, Book, SubscriptionTier, BookStatus } from '../types';
+import { getExperts, createExpert, updateExpert, deleteMultipleExperts as apiDeleteMultipleExperts, DuplicateEmailError } from '../services/apiService';
+import { ADMIN_CREDENTIALS, ADMIN_USER_OBJECT } from '../constants';
 import { supabase } from '../supabaseClient';
-import { getExperts, updateExpert, deleteExpert, createExpert } from '../services/apiService';
-import { ADMIN_CREDENTIALS } from '../constants';
+import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
+
+// Define the shape of the context
 interface AppContextType {
     experts: Expert[];
-    loading: boolean;
-    error: string | null;
+    filteredExperts: Expert[];
     currentUser: Expert | null;
-    view: string;
+    view: 'list' | 'profile' | 'admin' | 'title-hive' | 'terms' | 'privacy' | 'go-premium';
     selectedExpertId: string | null;
-    isLoginModalOpen: boolean;
-    isRegisterModalOpen: boolean;
-    isInquiryModalOpen: boolean;
-    isWishlistModalOpen: boolean;
-    isAudioPlayerOpen: boolean;
-    selectedBookForInquiry: { book: Book; expert: Expert } | null;
-    selectedAudioBook: Book | null;
     wishlist: WishlistItem[];
-    isScanning: boolean;
+    isBookInWishlist: (bookId: string) => boolean;
+    addToWishlist: (item: WishlistItem) => void;
+    removeFromWishlist: (bookId: string) => void;
+    searchQuery: string;
+    setSearchQuery: (query: string) => void;
+    genreFilter: BookGenre | null;
+    setGenreFilter: (genre: BookGenre | null) => void;
+    isLoading: boolean;
+    setIsLoading: (loading: boolean) => void;
+    sendLoginOtp: (email: string) => Promise<{ error: Error | null }>;
+    verifyLoginOtp: (email: string, token: string) => Promise<{ error: Error | null }>;
+    logout: () => void;
+    addExpert: (expertData: Omit<Expert, 'id' | 'createdAt' | 'updatedAt' | 'role' | 'status' | 'subscriptionTier' | 'books' | 'spotlights' | 'onLeave'>) => Promise<boolean>;
+    updateExpertProfile: (expertId: string, profileData: Partial<Expert>) => Promise<boolean>;
+    refreshCurrentUser: (updatedUser: Expert) => void;
+    updateExpertBooks: (expertId: string, books: Book[]) => Promise<void>;
+    updateExpertStatus: (expertId: string, status: UserStatus) => Promise<void>;
+    deleteMultipleExperts: (expertIds: string[]) => Promise<void>;
     updatingExpertIds: Set<string>;
     isErasing: boolean;
-    setView: (view: string) => void;
-    setSelectedExpertId: (id: string | null) => void;
-    setIsLoginModalOpen: (isOpen: boolean) => void;
-    setIsRegisterModalOpen: (isOpen: boolean) => void;
-    setIsInquiryModalOpen: (isOpen: boolean) => void;
-    setIsWishlistModalOpen: (isOpen: boolean) => void;
-    setIsAudioPlayerOpen: (isOpen: boolean) => void;
-    setSelectedBookForInquiry: (data: { book: Book; expert: Expert } | null) => void;
-    setSelectedAudioBook: (book: Book | null) => void;
-    setIsScanning: (isScanning: boolean) => void;
-    handleLogin: (email: string, role?: UserRole) => Promise<boolean>;
-    handleLogout: () => Promise<void>;
-    updateExpertProfile: (expertId: string, profileData: Partial<Expert>) => Promise<boolean>;
-    deleteExpertProfile: (expertId: string) => Promise<boolean>;
-    createNewExpert: (expertData: Omit<Expert, 'id' | 'createdAt' | 'status' | 'role' | 'subscriptionTier' | 'books'>) => Promise<boolean>;
-    addToWishlist: (book: Book, expert: Expert) => void;
-    removeFromWishlist: (bookId: string) => void;
-    isBookInWishlist: (bookId: string) => boolean;
-    handleUpdateExpertOptimistic: (updatedUser: Expert) => void;
-    runAlertAgent: (updatedExpert: Expert, newBooks: Book[]) => void;
-    fetchAndSetExperts: () => Promise<void>;
-    eraseAllUnapprovedExperts: () => Promise<void>;
+    navigateToList: () => void;
+    navigateToProfile: (expertId: string) => void;
+    navigateToAdmin: () => void;
+    navigateToTitleHive: () => void;
+    navigateToTerms: () => void;
+    navigateToPrivacy: () => void;
+    navigateToPremium: () => void;
 }
 
+// Create the context with a default undefined value
 export const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const adminUser: Expert = {
-    id: 'admin-user',
-    name: 'Admin',
-    email: ADMIN_CREDENTIALS.email,
-    role: UserRole.ADMIN,
-    genre: 'Platform Administration',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=faces',
-    bio: 'Platform Administrator',
-    createdAt: new Date().toISOString(),
-    status: 'active',
-    subscriptionTier: 'premium',
-    books: []
-};
-
+// Define the provider component
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    // STATE MANAGEMENT
     const [experts, setExperts] = useState<Expert[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [currentUser, setCurrentUser] = useState<Expert | null>(null);
-    const [view, setView] = useState<string>('list');
+    const [view, setView] = useState<'list' | 'profile' | 'admin' | 'title-hive' | 'terms' | 'privacy' | 'go-premium'>('list');
     const [selectedExpertId, setSelectedExpertId] = useState<string | null>(null);
-    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-    const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-    const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false);
-    const [isWishlistModalOpen, setIsWishlistModalOpen] = useState(false);
-    const [isAudioPlayerOpen, setIsAudioPlayerOpen] = useState(false);
-    const [selectedBookForInquiry, setSelectedBookForInquiry] = useState<{ book: Book; expert: Expert } | null>(null);
-    const [selectedAudioBook, setSelectedAudioBook] = useState<Book | null>(null);
     const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
-    const [isScanning, setIsScanning] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [genreFilter, setGenreFilter] = useState<BookGenre | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [updatingExpertIds, setUpdatingExpertIds] = useState<Set<string>>(new Set());
     const [isErasing, setIsErasing] = useState(false);
 
@@ -104,20 +83,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, []);
 
     // DATA FETCHING & INITIALIZATION
-    const fetchAndSetExperts = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const data = await getExperts();
-            setExperts(data);
-        } catch (err: any) {
-            setError(err.message || 'Failed to load experts.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
+        const fetchAndSetExperts = async () => {
+            setIsLoading(true);
+            try {
+                const dbExperts = await getExperts();
+                setExperts(dbExperts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            } catch (error) {
+                console.error("Failed to fetch experts:", error);
+                setExperts([]); // Fallback to empty array on error
+            } finally {
+                // Auth listener will handle setting loading to false
+            }
+        };
+
         fetchAndSetExperts();
 
         try {
@@ -130,9 +109,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     }, []);
 
-    // AUTH STATE SYNCHRONIZATION
+    // REAL-TIME AUTHENTICATION LISTENER
     useEffect(() => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event: AuthChangeEvent, session: Session | null) => {
+            setIsLoading(true);
             const user = session?.user;
     
             if (!user) {
@@ -141,121 +122,245 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
               setView('list');
             } else {
               if (user.email?.toLowerCase() === ADMIN_CREDENTIALS.email.toLowerCase()) {
+                const adminUser = ADMIN_USER_OBJECT;
                 setCurrentUser(adminUser);
                 safeSetSessionUser(adminUser);
               } else {
-                if (experts.length === 0) {
-                    return; 
+                // The experts list might not be loaded yet, especially on initial load.
+                // We ensure it is loaded before trying to find the user.
+                let allExperts = experts;
+                if (allExperts.length === 0) {
+                  const dbExperts = await getExperts();
+                  allExperts = dbExperts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                  setExperts(allExperts);
                 }
-                
-                const loggedInExpert = experts.find(
-                  (expert) => expert.email?.toLowerCase() === user.email?.toLowerCase()
-                );
+    
+                const loggedInExpert = allExperts.find(e => e.email.toLowerCase() === user.email?.toLowerCase());
     
                 if (loggedInExpert) {
                   setCurrentUser(loggedInExpert);
                   safeSetSessionUser(loggedInExpert);
                 } else {
                   console.error("Authenticated user not found in expert list:", user.email);
+                  // This user is authenticated but has no profile. Log them out.
                   await supabase.auth.signOut();
-                  setCurrentUser(null);
-                  safeSetSessionUser(null);
-                  alert("Your account is authenticated, but no corresponding expert profile was found. You have been logged out.");
                 }
               }
             }
-        });
+            setIsLoading(false);
+          }
+        );
     
         return () => {
           subscription.unsubscribe();
         };
-    }, [experts, safeSetSessionUser]);
+    }, [experts, safeSetSessionUser]); // Rerun if experts list changes
 
-    // LOGIN / LOGOUT HANDLERS
-    const handleLogin = async (email: string, role?: UserRole): Promise<boolean> => {
-        if (email.toLowerCase() === ADMIN_CREDENTIALS.email.toLowerCase()) {
-            setCurrentUser(adminUser);
-            safeSetSessionUser(adminUser);
-            setIsLoginModalOpen(false);
-            setView('admin');
-            return true;
-        }
 
-        const expert = experts.find(e => e.email?.toLowerCase() === email.toLowerCase());
-        if (expert) {
-            if (role && expert.role !== role) {
-                alert(`User does not have the role ${role}`);
-                return false;
+    // NAVIGATION
+    const navigateToList = useCallback(() => {
+        setView('list');
+        setSelectedExpertId(null);
+        setSearchQuery('');
+    }, []);
+
+    const navigateToProfile = useCallback((expertId: string) => {
+        setView('profile');
+        setSelectedExpertId(expertId);
+    }, []);
+    
+    // Deep Linking Effect
+    useEffect(() => {
+        if (experts.length > 0) {
+            const hash = window.location.hash;
+            const profileMatch = hash.match(/^#\/profile\/(.+)$/);
+            if (profileMatch && profileMatch[1]) {
+                const expertId = profileMatch[1];
+                if (experts.some(e => e.id === expertId)) {
+                    navigateToProfile(expertId);
+                }
             }
-            setCurrentUser(expert);
-            safeSetSessionUser(expert);
-            setIsLoginModalOpen(false);
-            return true;
+        }
+    }, [experts, navigateToProfile]);
+
+    // Scroll-to-top on view change
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [view]);
+
+
+    const navigateToAdmin = useCallback(() => {
+        if (currentUser?.role === UserRole.ADMIN) {
+            setView('admin');
+        }
+    }, [currentUser]);
+
+    const navigateToTitleHive = useCallback(() => {
+        setView('title-hive');
+    }, []);
+
+    const navigateToTerms = useCallback(() => {
+        setView('terms');
+    }, []);
+
+    const navigateToPrivacy = useCallback(() => {
+        setView('privacy');
+    }, []);
+
+    const navigateToPremium = useCallback(() => {
+        setView('go-premium');
+    }, []);
+
+
+    // USER & AUTHENTICATION
+    const sendLoginOtp = async (email: string): Promise<{ error: Error | null }> => {
+        const normalizedEmail = email.toLowerCase().trim();
+        
+        if (normalizedEmail === ADMIN_CREDENTIALS.email.toLowerCase()) {
+            // For the admin, we always allow user creation. If the auth user doesn't exist,
+            // this will create it. If it exists, it will just send the OTP. This makes the
+            // admin login robust across different environments.
+            const { error } = await supabase.auth.signInWithOtp({
+                email: normalizedEmail,
+                options: { shouldCreateUser: true }
+            });
+            // The onAuthStateChange listener will handle the successful login.
+            return { error };
         }
         
-        return false;
+        // First attempt: Standard login for existing users.
+        let { error } = await supabase.auth.signInWithOtp({
+            email: normalizedEmail,
+            options: {
+                shouldCreateUser: false,
+            }
+        });
+    
+        // If it fails because signups are not allowed, it means the auth user doesn't exist.
+        // Let's check if they have a profile in our DB.
+        if (error && error.message.includes('Signups not allowed for otp')) {
+            const expertExists = experts.some(e => e.email.toLowerCase() === normalizedEmail);
+    
+            // If a profile exists, this is a user from before the auth fix.
+            // We should "heal" their account by creating an auth user for them.
+            if (expertExists) {
+                console.warn(`Auth user for ${normalizedEmail} not found, but profile exists. Attempting to create auth user to self-heal account.`);
+                // Retry, but this time allow user creation.
+                const { error: creationError } = await supabase.auth.signInWithOtp({
+                    email: normalizedEmail,
+                    options: {
+                        shouldCreateUser: true,
+                    }
+                });
+                // The result of this second call is the one we return.
+                return { error: creationError };
+            } else {
+                // If no profile exists either, then it's a true unknown user.
+                // Provide a more specific error message.
+                return { error: new Error("No account found with this email. Please sign up using the 'Be GO2' button.") };
+            }
+        }
+    
+        // Return the original error or null if successful.
+        return { error };
     };
 
-    const handleLogout = async () => {
+    const verifyLoginOtp = async (email: string, token: string): Promise<{ error: Error | null }> => {
+        const { error } = await supabase.auth.verifyOtp({
+            email: email.toLowerCase().trim(),
+            token: token.trim(),
+            type: 'email',
+        });
+        // The onAuthStateChange listener will handle the successful login.
+        return { error };
+    };
+
+
+    const logout = useCallback(async () => {
+        setIsLoading(true);
         await supabase.auth.signOut();
-        setCurrentUser(null);
-        safeSetSessionUser(null);
+        // The onAuthStateChange listener handles state cleanup.
+        setIsLoading(false);
         setView('list');
-    };
+    }, []);
 
-    // EXPERT CRUD OPERATIONS
-    const updateExpertProfile = async (expertId: string, profileData: Partial<Expert>): Promise<boolean> => {
+    // EXPERT DATA MANAGEMENT
+    const addExpert = async (expertData: Omit<Expert, 'id' | 'createdAt' | 'updatedAt' | 'role' | 'status' | 'subscriptionTier' | 'books' | 'spotlights' | 'onLeave'>): Promise<boolean> => {
+        setIsLoading(true);
         try {
-            setUpdatingExpertIds(prev => new Set(prev).add(expertId));
+            const newExpertPayload: Omit<Expert, 'id' | 'createdAt' | 'updatedAt'> = {
+                ...expertData,
+                role: UserRole.EXPERT,
+                status: UserStatus.ACTIVE,
+                subscriptionTier: SubscriptionTier.FREE,
+                books: [],
+                spotlights: [],
+                onLeave: false,
+            };
+            const createdExpert = await createExpert(newExpertPayload);
+            const updatedExperts = [createdExpert, ...experts];
+            setExperts(updatedExperts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            
+            // This is the crucial change. For a new user, we call signInWithOtp
+            // allowing it to create an entry in the Supabase auth table.
+            const { error: otpError } = await supabase.auth.signInWithOtp({
+                email: createdExpert.email.toLowerCase().trim(),
+                options: {
+                    shouldCreateUser: true,
+                }
+            });
+
+            if (otpError) {
+                // This is a critical failure. The profile was created, but the auth user wasn't.
+                // This leaves an orphaned profile. We should ideally roll back the creation.
+                // For now, alerting the user is the simplest fix.
+                console.error("Critical error: Profile created but failed to create auth user:", otpError);
+                alert("Your profile was created, but we failed to create your login account. Please try signing in from the main login page. If the problem persists, contact support.");
+            } else {
+                alert("Profile created! Check your email for a one-time code to log in.");
+            }
+            return true;
+        } catch (error) {
+            console.error("Error adding expert:", error);
+            if (error instanceof DuplicateEmailError) {
+                alert("An expert with this email already exists. Please use a different email.");
+            } else {
+                alert("An error occurred while creating the profile. Please try again.");
+            }
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const updateExpertProfile = async (expertId: string, profileData: Partial<Expert>): Promise<boolean> => {
+        setUpdatingExpertIds(prev => new Set(prev).add(expertId));
+        try {
             const updatedExpert = await updateExpert(expertId, profileData);
-            setExperts(prev => prev.map(e => (e.id === expertId ? updatedExpert : e)));
+            setExperts(prevExperts => {
+                const newExperts = prevExperts.map(e => e.id === expertId ? { ...e, ...updatedExpert } : e);
+                return newExperts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            });
             if (currentUser?.id === expertId) {
                 const updatedCurrentUser = { ...currentUser, ...updatedExpert };
                 setCurrentUser(updatedCurrentUser);
                 safeSetSessionUser(updatedCurrentUser);
             }
             return true;
-        } catch (error: any) {
+        } catch (error) {
             console.error("Failed to update expert profile:", error);
-            alert(`Failed to update profile: ${error.message}`);
+            alert(`Failed to update profile: ${error instanceof Error ? error.message : "An unknown error occurred"}`);
             return false;
         } finally {
             setUpdatingExpertIds(prev => {
-                const next = new Set(prev);
-                next.delete(expertId);
-                return next;
+                const newSet = new Set(prev);
+                newSet.delete(expertId);
+                return newSet;
             });
         }
     };
 
-    const deleteExpertProfile = async (expertId: string): Promise<boolean> => {
-        try {
-            await deleteExpert(expertId);
-            setExperts(prev => prev.filter(e => e.id !== expertId));
-            if (currentUser?.id === expertId) {
-                await handleLogout();
-            }
-            return true;
-        } catch (error: any) {
-            console.error("Failed to delete expert profile:", error);
-            alert(`Failed to delete profile: ${error.message}`);
-            return false;
-        }
-    };
-
-    const createNewExpert = async (expertData: Omit<Expert, 'id' | 'createdAt' | 'status' | 'role' | 'subscriptionTier' | 'books'>): Promise<boolean> => {
-        try {
-            const newExpert = await createExpert(expertData);
-            setExperts(prev => [newExpert, ...prev]);
-            return true;
-        } catch (error: any) {
-            console.error("Failed to create new expert profile:", error);
-            alert(`Failed to submit profile: ${error.message}`);
-            return false;
-        }
-    };
-
-    const handleUpdateExpertOptimistic = useCallback((updatedUser: Expert) => {
+    const refreshCurrentUser = useCallback((updatedUser: Expert) => {
         setExperts(prevExperts => {
             const newExperts = prevExperts.map(e => e.id === updatedUser.id ? updatedUser : e);
             return newExperts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -266,43 +371,77 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     
     const runAlertAgent = (updatedExpert: Expert, newBooks: Book[]) => {
         if (newBooks.length === 0) return;
-        
-        console.log(`AI Agent checking alerts for ${newBooks.length} new books from ${updatedExpert.name}`);
-    };
 
-    const eraseAllUnapprovedExperts = async () => {
-        if (currentUser?.role !== UserRole.ADMIN) {
-            alert('Only administrators can perform this action.');
-            return;
-        }
-
-        const unapprovedExperts = experts.filter(e => e.status === 'pending' || e.status === 'rejected');
-        if (unapprovedExperts.length === 0) {
-            alert('No pending or rejected expert profiles found to erase.');
-            return;
-        }
-
-        const confirmErase = window.confirm(
-            `Are you sure you want to permanently erase ${unapprovedExperts.length} unapproved expert profile(s)? This action cannot be undone.`
+        const premiumSearchers = experts.filter(
+            e => e.subscriptionTier === SubscriptionTier.PREMIUM &&
+                    e.bookQuery?.title &&
+                    e.bookQuery?.author &&
+                    e.id !== updatedExpert.id // Don't notify the seller
         );
 
-        if (!confirmErase) return;
+        if (premiumSearchers.length === 0) return;
+
+        for (const newBook of newBooks) {
+            for (const searcher of premiumSearchers) {
+                const queryTitle = searcher.bookQuery!.title.toLowerCase();
+                const queryAuthor = searcher.bookQuery!.author.toLowerCase();
+                const bookTitle = newBook.title.toLowerCase();
+                const bookAuthor = newBook.author.toLowerCase();
+
+                if (bookTitle.includes(queryTitle) && bookAuthor.includes(queryAuthor)) {
+                    const profileUrl = `${window.location.origin}${window.location.pathname}#/profile/${updatedExpert.id}`;
+                    console.log(`--- 📧 TITLE HIVE ALERT ---`);
+                    console.log(`To: ${searcher.email}`);
+                    console.log(`Subject: A Book You're Searching For Is Now Available!`);
+                    console.log(`\nHello ${searcher.name},\n`);
+                    console.log(`Good news! A book matching your search query has just been listed by ${updatedExpert.name}.`);
+                    console.log(`\n--- Book Details ---`);
+                    console.log(`Title: ${newBook.title}`);
+                    console.log(`Author: ${newBook.author}`);
+                    console.log(`\nYou can view the expert's profile here: ${profileUrl}`);
+                    console.log(`-------------------------\n`);
+                }
+            }
+        }
+    };
+
+    const updateExpertBooks = async (expertId: string, books: Book[]) => {
+        const expertToUpdate = experts.find(e => e.id === expertId);
+        if (!expertToUpdate) return;
+
+        const oldBookIds = new Set((expertToUpdate.books || []).map(b => b.id));
+        const newBooks = books.filter(b => !oldBookIds.has(b.id) && b.status === BookStatus.AVAILABLE);
+
+        const success = await updateExpertProfile(expertId, { books });
+
+        // Run the alert agent after a successful database update.
+        if (success) {
+            const updatedExpert = experts.find(e => e.id === expertId);
+            if (updatedExpert) {
+                runAlertAgent(updatedExpert, newBooks);
+            }
+        }
+    };
+
+    const updateExpertStatus = async (expertId: string, status: UserStatus) => {
+        await updateExpertProfile(expertId, { status });
+    };
+
+    const deleteMultipleExperts = async (expertIds: string[]) => {
+        if (expertIds.length === 0) return;
 
         setIsErasing(true);
         try {
-            for (const expert of unapprovedExperts) {
-                await deleteExpert(expert.id);
-            }
-            setExperts(prev => prev.filter(e => e.status === 'active'));
-            alert(`Successfully erased ${unapprovedExperts.length} unapproved profile(s).`);
-        } catch (error: any) {
-            console.error('Error erasing unapproved experts:', error);
-            alert(`Failed to erase unapproved experts: ${error.message}`);
+            await apiDeleteMultipleExperts(expertIds);
+            setExperts(prev => prev.filter(e => !expertIds.includes(e.id)));
+        } catch (error) {
+            console.error("Failed to delete experts:", error);
+            alert("An error occurred while deleting users.");
         } finally {
             setIsErasing(false);
         }
     };
-
+    
     // WISHLIST MANAGEMENT
     useEffect(() => {
         try {
@@ -313,64 +452,81 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, [wishlist]);
 
     const isBookInWishlist = useCallback((bookId: string) => {
-        return wishlist.some(item => item.book.id === bookId);
+        return wishlist.some(item => item.bookId === bookId);
     }, [wishlist]);
 
-    const addToWishlist = useCallback((book: Book, expert: Expert) => {
-        setWishlist(prev => {
-            if (prev.some(item => item.book.id === book.id)) return prev;
-            return [...prev, { book, expert, addedAt: new Date().toISOString() }];
-        });
+    const addToWishlist = useCallback((item: WishlistItem) => {
+        setWishlist(prev => [...prev, item]);
     }, []);
 
     const removeFromWishlist = useCallback((bookId: string) => {
-        setWishlist(prev => prev.filter(item => item.book.id !== bookId));
+        setWishlist(prev => prev.filter(item => item.bookId !== bookId));
     }, []);
 
+    // FILTERING
+    const filteredExperts = useMemo(() => {
+        return experts.filter(expert => {
+            if (expert.role !== UserRole.EXPERT) return false;
+
+            const matchesGenre = !genreFilter || expert.genre === genreFilter;
+            
+            const lowerCaseQuery = searchQuery.toLowerCase();
+            const matchesSearch = !lowerCaseQuery ||
+                expert.name.toLowerCase().includes(lowerCaseQuery) ||
+                expert.genre.toLowerCase().includes(lowerCaseQuery) ||
+                (expert.books || []).some(book => 
+                    (book.title || '').toLowerCase().includes(lowerCaseQuery) ||
+                    (book.author || '').toLowerCase().includes(lowerCaseQuery)
+                ) ||
+                (expert.bookQuery && (
+                    expert.bookQuery.title.toLowerCase().includes(lowerCaseQuery) ||
+                    expert.bookQuery.author.toLowerCase().includes(lowerCaseQuery)
+                ));
+
+            return matchesGenre && matchesSearch;
+        });
+    }, [experts, genreFilter, searchQuery]);
+
+
+    // CONTEXT VALUE
+    const contextValue: AppContextType = {
+        experts,
+        filteredExperts,
+        currentUser,
+        view,
+        selectedExpertId,
+        wishlist,
+        isBookInWishlist,
+        addToWishlist,
+        removeFromWishlist,
+        searchQuery,
+        setSearchQuery,
+        genreFilter,
+        setGenreFilter,
+        isLoading,
+        setIsLoading,
+        sendLoginOtp,
+        verifyLoginOtp,
+        logout,
+        addExpert,
+        updateExpertProfile,
+        refreshCurrentUser,
+        updateExpertBooks,
+        updateExpertStatus,
+        deleteMultipleExperts,
+        updatingExpertIds,
+        isErasing,
+        navigateToList,
+        navigateToProfile,
+        navigateToAdmin,
+        navigateToTitleHive,
+        navigateToTerms,
+        navigateToPrivacy,
+        navigateToPremium,
+    };
+
     return (
-        <AppContext.Provider
-            value={{
-                experts,
-                loading,
-                error,
-                currentUser,
-                view,
-                selectedExpertId,
-                isLoginModalOpen,
-                isRegisterModalOpen,
-                isInquiryModalOpen,
-                isWishlistModalOpen,
-                isAudioPlayerOpen,
-                selectedBookForInquiry,
-                selectedAudioBook,
-                wishlist,
-                isScanning,
-                updatingExpertIds,
-                isErasing,
-                setView,
-                setSelectedExpertId,
-                setIsLoginModalOpen,
-                setIsRegisterModalOpen,
-                setIsInquiryModalOpen,
-                setIsWishlistModalOpen,
-                setIsAudioPlayerOpen,
-                setSelectedBookForInquiry,
-                setSelectedAudioBook,
-                setIsScanning,
-                handleLogin,
-                handleLogout,
-                updateExpertProfile,
-                deleteExpertProfile,
-                createNewExpert,
-                addToWishlist,
-                removeFromWishlist,
-                isBookInWishlist,
-                handleUpdateExpertOptimistic,
-                runAlertAgent,
-                fetchAndSetExperts,
-                eraseAllUnapprovedExperts,
-            }}
-        >
+        <AppContext.Provider value={contextValue}>
             {children}
         </AppContext.Provider>
     );
