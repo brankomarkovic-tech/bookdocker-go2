@@ -1,5 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-import { Expert, Book, Spotlight, SocialLinks, BookQuery, PresentOffer } from '../types';
+import { Expert } from '../types';
 import { supabase } from '../supabaseClient';
 
 export class DuplicateEmailError extends Error {
@@ -156,6 +155,10 @@ export const deleteMultipleExperts = async (expertIds: string[]): Promise<void> 
     console.error("Supabase error deleting experts:", error);
     throw new Error(formatSupabaseError(error));
   }
+};
+
+export const deleteExpert = async (expertId: string): Promise<void> => {
+  return deleteMultipleExperts([expertId]);
 };
 
 export const invokeSendEmailFunction = async (payload: object): Promise<void> => {
