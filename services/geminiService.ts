@@ -86,3 +86,14 @@ export const getAdminInsights = async (query: string, experts: Expert[]): Promis
         throw error;
     }
 };
+
+export interface ExtractedBookInfo {
+    title?: string;
+    author?: string;
+    year?: number;
+    description?: string;
+}
+
+export const scanBookCover = async (file: File): Promise<ExtractedBookInfo | null> => {
+    return null;
+};
