@@ -1,26 +1,15 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { BookGenre, Expert, ModerationAlert } from '../types';
+import { invokeGeminiAdminAgent } from './apiService';
 
-// Ensure process.env.API_KEY is available.
-// In a Vite environment, this is typically handled by `define` in `vite.config.ts`
-const apiKey = process.env.API_KEY;
+// The client-side bio generation is permanently disabled for security.
+// All Gemini API calls must go through a secure backend function.
+const disabledFeatureMessage = 'This specific AI feature is disabled on the client for security. Other admin AI features are available.';
 
-if (!apiKey) {
-  console.warn("Gemini API key is not set. AI features may not work.");
-}
-
-const ai = new GoogleGenAI({ apiKey: apiKey || '' });
-
-const fileToGenerativePart = async (file: File) => {
-  const base64EncodedDataPromise = new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-    reader.readAsDataURL(file);
-  });
-  return {
-    inlineData: { data: await base64EncodedDataPromise as string, mimeType: file.type },
-  };
+export const generateBio = async (name: string, genre: BookGenre | string): Promise<string> => {
+  console.error("generateBio is permanently disabled on the client.");
+  // Return a non-AI-generated string as a fallback.
+  return `As an expert in ${genre}, I, ${name}, have curated a collection of rare and interesting books. My passion for ${typeof genre === 'string' ? genre.toLowerCase() : genre} drives me to find unique editions and share them with fellow enthusiasts. I believe every book has a story, not just in its pages, but in its history as an object. I look forward to connecting with other book lovers on this platform.`;
 };
-
 
 export const resizeImage = (
     file: File,
@@ -52,9 +41,7 @@ export const resizeImage = (
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
-                if (!ctx) {
-                    return reject(new Error('Could not get canvas context'));
-                }
+                if (!ctx) return reject(new Error('Could not get canvas context'));
 
                 // Fill with white background so transparent images don't turn black when converted to JPEG
                 ctx.fillStyle = '#FFFFFF';
@@ -70,55 +57,32 @@ export const resizeImage = (
     });
 };
 
-export const scanBookCover = async (imageFile: File): Promise<{ title?: string; author?: string }> => {
-    if (!apiKey) {
-        throw new Error("Gemini API key is not configured.");
-    }
-    const imagePart = await fileToGenerativePart(imageFile);
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
-            imagePart,
-            "Identify the book title and author from this cover image. Respond with a JSON object containing 'title' and 'author' keys. If you cannot find one of the fields, omit it from the JSON. Do not include any markdown formatting like ```json, just the raw JSON string."
-        ],
-        config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    title: {
-                        type: Type.STRING,
-                        description: 'The title of the book.',
-                    },
-                    author: {
-                        type: Type.STRING,
-                        description: 'The author of the book.',
-                    },
-                },
-            },
-        },
-    });
-
+export const scanContentForIssues = async (experts: Expert[]): Promise<ModerationAlert[]> => {
     try {
-        const text = response.text.trim();
-        const data = JSON.parse(text);
-        return data;
-    } catch (e) {
-        console.error("Failed to parse Gemini response as JSON:", response.text, e);
-        return {};
+        const data = await invokeGeminiAdminAgent({
+            type: 'scanContentForIssues',
+            experts
+        });
+        return data.alerts || [];
+    } catch (error) {
+        console.error("Error scanning content:", error);
+        throw error;
     }
 };
 
-export const generateBio = async (name: string, genre: string): Promise<string> => {
-    if (!apiKey) {
-        throw new Error("Gemini API key is not configured.");
+export const getAdminInsights = async (query: string, experts: Expert[]): Promise<string> => {
+    try {
+        const data = await invokeGeminiAdminAgent({
+            type: 'getAdminInsights',
+            query,
+            experts,
+        });
+        if (data && typeof data.insight === 'string') {
+            return data.insight;
+        }
+        throw new Error('Received an invalid response from the AI agent.');
+    } catch (error) {
+        console.error("Error getting admin insights:", error);
+        throw error;
     }
-    const prompt = `Write a short, engaging, and professional bio (2-3 sentences) for a book expert named ${name} specializing in the ${genre} genre. The bio should make them sound knowledgeable and passionate, suitable for a profile on a platform for book collectors.`;
-    
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-    });
-
-    return response.text.trim();
 };
