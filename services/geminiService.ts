@@ -1,20 +1,33 @@
-import { BookGenre, Expert, ModerationAlert } from '../types';
-import { invokeGeminiAdminAgent } from './apiService';
+import { GoogleGenAI, Type } from "@google/genai";
 
+// Ensure process.env.API_KEY is available.
+// In a Vite environment, this is typically handled by `define` in `vite.config.ts`
+const apiKey = process.env.API_KEY;
 
-// The client-side bio generation is permanently disabled for security.
-// All Gemini API calls must go through a secure backend function.
-const disabledFeatureMessage = 'This specific AI feature is disabled on the client for security. Other admin AI features are available.';
+if (!apiKey) {
+  console.warn("Gemini API key is not set. AI features may not work.");
+}
 
-export const generateBio = async (name: string, genre: BookGenre): Promise<string> => {
-  console.error("generateBio is permanently disabled on the client.");
-  alert(disabledFeatureMessage);
-  // Return a non-AI-generated string as a fallback.
-  return `As an expert in ${genre}, I, ${name}, have curated a collection of rare and interesting books. My passion for ${genre.toLowerCase()} drives me to find unique editions and share them with fellow enthusiasts. I believe every book has a story, not just in its pages, but in its history as an object. I look forward to connecting with other book lovers on this platform.`;
+const ai = new GoogleGenAI({ apiKey: apiKey || '' });
+
+const fileToGenerativePart = async (file: File) => {
+  const base64EncodedDataPromise = new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+    reader.readAsDataURL(file);
+  });
+  return {
+    inlineData: { data: await base64EncodedDataPromise as string, mimeType: file.type },
+  };
 };
 
 
-export const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
+export const resizeImage = (
+    file: File,
+    maxWidth: number = 320,
+    maxHeight: number = 440,
+    quality: number = 0.65
+): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -25,24 +38,31 @@ export const resizeImage = (file: File, maxWidth: number, maxHeight: number): Pr
                 const canvas = document.createElement('canvas');
                 let { width, height } = img;
 
-                if (width > height) {
-                    if (width > maxWidth) {
-                        height = Math.round((height * maxWidth) / width);
-                        width = maxWidth;
-                    }
-                } else {
-                    if (height > maxHeight) {
-                        width = Math.round((width * maxHeight) / height);
-                        height = maxHeight;
-                    }
+                // Scale down keeping aspect ratio
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
                 }
+
+                // Minimum dimensions safeguard
+                width = Math.max(1, width);
+                height = Math.max(1, height);
 
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
-                if (!ctx) return reject(new Error('Could not get canvas context'));
+                if (!ctx) {
+                    return reject(new Error('Could not get canvas context'));
+                }
+
+                // Fill with white background so transparent images don't turn black when converted to JPEG
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, width, height);
                 ctx.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL(file.type));
+
+                // Always export as lightweight JPEG with compression
+                resolve(canvas.toDataURL('image/jpeg', quality));
             };
             img.onerror = (error) => reject(error);
         };
@@ -50,34 +70,55 @@ export const resizeImage = (file: File, maxWidth: number, maxHeight: number): Pr
     });
 };
 
-export const scanContentForIssues = async (experts: Expert[]): Promise<ModerationAlert[]> => {
+export const scanBookCover = async (imageFile: File): Promise<{ title?: string; author?: string }> => {
+    if (!apiKey) {
+        throw new Error("Gemini API key is not configured.");
+    }
+    const imagePart = await fileToGenerativePart(imageFile);
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+            imagePart,
+            "Identify the book title and author from this cover image. Respond with a JSON object containing 'title' and 'author' keys. If you cannot find one of the fields, omit it from the JSON. Do not include any markdown formatting like ```json, just the raw JSON string."
+        ],
+        config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    title: {
+                        type: Type.STRING,
+                        description: 'The title of the book.',
+                    },
+                    author: {
+                        type: Type.STRING,
+                        description: 'The author of the book.',
+                    },
+                },
+            },
+        },
+    });
+
     try {
-        const data = await invokeGeminiAdminAgent({
-            type: 'scanContentForIssues',
-            experts
-        });
-        return data.alerts;
-    } catch (error) {
-        console.error("Error scanning content:", error);
-        throw error; // Re-throw to be handled by the component
+        const text = response.text.trim();
+        const data = JSON.parse(text);
+        return data;
+    } catch (e) {
+        console.error("Failed to parse Gemini response as JSON:", response.text, e);
+        return {};
     }
 };
 
-// FIX: Add missing getAdminInsights function to provide data for the AI Agent component.
-export const getAdminInsights = async (query: string, experts: Expert[]): Promise<string> => {
-    try {
-        const data = await invokeGeminiAdminAgent({
-            type: 'getAdminInsights',
-            query,
-            experts,
-        });
-        // Assuming the backend returns an object with an 'insight' property
-        if (data && typeof data.insight === 'string') {
-            return data.insight;
-        }
-        throw new Error('Received an invalid response from the AI agent.');
-    } catch (error) {
-        console.error("Error getting admin insights:", error);
-        throw error; // Re-throw to be handled by the component
+export const generateBio = async (name: string, genre: string): Promise<string> => {
+    if (!apiKey) {
+        throw new Error("Gemini API key is not configured.");
     }
+    const prompt = `Write a short, engaging, and professional bio (2-3 sentences) for a book expert named ${name} specializing in the ${genre} genre. The bio should make them sound knowledgeable and passionate, suitable for a profile on a platform for book collectors.`;
+    
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+    });
+
+    return response.text.trim();
 };
