@@ -68,7 +68,6 @@ export const YouTubeIcon: React.FC<{ className?: string }> = ({ className }) => 
     </svg>
 );
 
-
 export const HeartIcon: React.FC<{ className?: string; isFilled?: boolean }> = ({ className, isFilled }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill={isFilled ? "currentColor" : "none"} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z" />
@@ -140,16 +139,12 @@ export const OnLeaveIcon: React.FC<{ className?: string }> = ({ className }) => 
 
 export const PresentIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        {/* A larger box, scaled up by ~20% */}
         <rect x="2.4" y="8.5" width="19.2" height="13" rx="2" ry="2" />
-        {/* The ribbon crossing the larger box */}
         <line x1="12" y1="8.5" x2="12" y2="21.5" />
         <line x1="2.4" y1="15" x2="21.6" y2="15" />
-        {/* The infinity-style bow, moved up to not overlap with the box */}
         <path d="M 4,6 C 4,2 8,2 12,6 C 16,10 20,10 20,6 C 20,2 16,2 12,6 C 8,10 4,10 4,6" />
     </svg>
 );
-
 
 export const HoneycombIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -163,30 +158,21 @@ export const HoneycombIcon: React.FC<{ className?: string }> = ({ className }) =
 
 export const BuzzIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24">
-        {/* Add a group to rotate the entire icon 90 degrees clockwise around the center */}
         <g transform="rotate(90 12 12)">
             <defs>
                 <mask id="buzzIconMaskFinal">
                     <rect width="24" height="24" fill="white" />
-                    {/* FIX: Changed string literals to numeric JSX expressions for SVG properties. */}
                     <line x1={15.6} y1={8.336} x2={15.6} y2={15.664} stroke="black" strokeWidth={1.6} strokeLinecap="round" />
                     <line x1={18.8} y1={8.336} x2={18.8} y2={15.664} stroke="black" strokeWidth={1.6} strokeLinecap="round" />
                 </mask>
             </defs>
             
             <g>
-                {/* Left circle (outline) */}
-                {/* FIX: Changed string literals to numeric JSX expressions for SVG properties. */}
                 <circle cx={6} cy={12} r={2.05} fill="none" stroke="currentColor" strokeWidth={1.6} />
-                
-                {/* Scaled and recentered ellipses (now filled) */}
-                {/* FIX: Changed string literals to numeric JSX expressions for SVG properties. */}
                 <ellipse cx={11.2} cy={8.4} rx={2.08} ry={4.16} fill="currentColor" stroke="none" />
                 <ellipse cx={11.2} cy={15.6} rx={2.08} ry={4.16} fill="currentColor" stroke="none" />
             </g>
 
-            {/* Scaled and recentered right circle */}
-            {/* FIX: Changed string literals to numeric JSX expressions for SVG properties. */}
             <circle cx={17.2} cy={12} r={4} fill="currentColor" stroke="none" mask="url(#buzzIconMaskFinal)" />
         </g>
     </svg>
@@ -225,5 +211,11 @@ export const CheckCircleIcon: React.FC<{ className?: string }> = ({ className })
 export const XCircleIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
+export const UploadIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
     </svg>
 );
