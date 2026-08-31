@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useAppContext } from '../hooks/useAppContext';
 import { BookGenre, SocialLinks } from '../types';
 import { generateBio, resizeImage } from '../services/geminiService';
-import { COUNTRIES } from '../constants';
+import { COUNTRIES, DEFAULT_AVATAR_URL } from '../constants';
 
 interface ProfileFormProps {
   onClose: () => void;
@@ -74,7 +74,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ onClose }) => {
       email: email.trim(),
       genre,
       bio,
-      avatarUrl: avatarUrl || `https://picsum.photos/seed/${name.replace(/\s+/g, '')}/400`,
+      avatarUrl: avatarUrl || DEFAULT_AVATAR_URL,
       country: country || undefined,
       socialLinks: Object.keys(finalSocialLinks).length > 0 ? finalSocialLinks : undefined,
     };
