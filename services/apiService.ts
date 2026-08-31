@@ -1,5 +1,6 @@
 import { Expert } from '../types';
 import { supabase } from '../supabaseClient';
+import { DEFAULT_AVATAR_URL } from '../constants';
 
 export class DuplicateEmailError extends Error {
   constructor(message: string) {
@@ -50,6 +51,9 @@ const mapToExpert = (dbData: any): Expert => {
     // Ensure nested arrays are not null/undefined
     expert.books = expert.books || [];
     expert.spotlights = expert.spotlights || [];
+    if (!expert.avatarUrl || expert.avatarUrl.includes('picsum.photos')) {
+        expert.avatarUrl = DEFAULT_AVATAR_URL;
+    }
     return expert;
 };
 
