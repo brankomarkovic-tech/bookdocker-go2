@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { useAppContext } from '../hooks/useAppContext';
 import { BookGenre, Expert, SocialLinks, BookQuery, SubscriptionTier, Spotlight, PresentOffer, BookStatus } from '../types';
 import { generateBio, resizeImage } from '../services/geminiService';
-import { COUNTRIES, FREE_SPOTLIGHT_LIMIT, PREMIUM_SPOTLIGHT_LIMIT } from '../constants';
+import { COUNTRIES, FREE_SPOTLIGHT_LIMIT, PREMIUM_SPOTLIGHT_LIMIT, DEFAULT_AVATAR_URL } from '../constants';
 import { MicrophoneIcon, StopCircleIcon, TrashIcon, BuzzIcon, HoneycombIcon, PresentIcon } from './icons';
 
 interface EditProfileFormProps {
@@ -190,7 +190,7 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ expert, onClose }) =>
     ? { bookId: presentOffer.bookId, booksRequired: Number(presentOffer.booksRequired), message: presentOffer.message?.trim() || undefined } : undefined;
 
     const profileData: Partial<Expert> = {
-        name, email, genre, bio, avatarUrl, country: country || undefined,
+    name, email, genre, bio, avatarUrl: avatarUrl || DEFAULT_AVATAR_URL, country: country || undefined,
         socialLinks: Object.keys(finalSocialLinks).length > 0 ? finalSocialLinks : undefined,
         bookQuery: finalBookQuery,
         spotlights: finalSpotlights,
