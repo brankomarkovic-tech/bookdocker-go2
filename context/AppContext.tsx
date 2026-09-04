@@ -1,9 +1,11 @@
 import React, { createContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Expert, BookGenre, WishlistItem, UserRole, UserStatus, Book, SubscriptionTier, BookStatus } from '../types';
 import { getExperts, createExpert, updateExpert, deleteMultipleExperts as apiDeleteMultipleExperts, DuplicateEmailError } from '../services/apiService';
 import { ADMIN_CREDENTIALS, ADMIN_USER_OBJECT } from '../constants';
 import { supabase } from '../supabaseClient';
 import { AuthChangeEvent, Session } from '@supabase/supabase-js';
+import { getExpertSlug, findExpertBySlugOrId } from '../utils/slug';
 
 
 // Define the shape of the context
@@ -35,7 +37,7 @@ interface AppContextType {
     updatingExpertIds: Set<string>;
     isErasing: boolean;
     navigateToList: () => void;
-    navigateToProfile: (expertId: string) => void;
+    navigateToProfile: (expertId: string, bookId?: string) => void;
     navigateToAdmin: () => void;
     navigateToTitleHive: () => void;
     navigateToTerms: () => void;
@@ -48,6 +50,9 @@ export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Define the provider component
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+
     // STATE MANAGEMENT
     const [experts, setExperts] = useState<Expert[]>([]);
     const [currentUser, setCurrentUser] = useState<Expert | null>(null);
@@ -93,7 +98,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 console.error("Failed to fetch experts:", error);
                 setExperts([]); // Fallback to empty array on error
             } finally {
-                // Auth listener will handle setting loading to false
+                setIsLoading(false);
             }
         };
 
@@ -157,59 +162,94 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, [experts, safeSetSessionUser]); // Rerun if experts list changes
 
 
-    // NAVIGATION
-    const navigateToList = useCallback(() => {
-        setView('list');
-        setSelectedExpertId(null);
-        setSearchQuery('');
-    }, []);
-
-    const navigateToProfile = useCallback((expertId: string) => {
-        setView('profile');
-        setSelectedExpertId(expertId);
-    }, []);
-    
-    // Deep Linking Effect
+    // SYNCHRONIZE VIEW & SELECTED EXPERT WITH CURRENT ROUTE
     useEffect(() => {
-        if (experts.length > 0) {
-            const hash = window.location.hash;
-            const profileMatch = hash.match(/^#\/profile\/(.+)$/);
-            if (profileMatch && profileMatch[1]) {
-                const expertId = profileMatch[1];
-                if (experts.some(e => e.id === expertId)) {
-                    navigateToProfile(expertId);
+        const pathname = location.pathname;
+        if (pathname.startsWith('/profile/')) {
+            const parts = pathname.split('/');
+            const identifier = parts[2];
+            setView('profile');
+            if (identifier) {
+                // If experts are already loaded, resolve to actual ID
+                const matched = findExpertBySlugOrId(identifier, experts);
+                if (matched) {
+                    setSelectedExpertId(matched.id);
+                } else {
+                    setSelectedExpertId(identifier);
                 }
             }
+        } else if (pathname === '/admin') {
+            setView('admin');
+        } else if (pathname === '/titlehive' || pathname === '/title-hive' || pathname === '/hive') {
+            setView('title-hive');
+        } else if (pathname === '/terms') {
+            setView('terms');
+        } else if (pathname === '/privacy') {
+            setView('privacy');
+        } else if (pathname === '/premium' || pathname === '/go-premium') {
+            setView('go-premium');
+        } else if (pathname === '/') {
+            setView('list');
+            setSelectedExpertId(null);
         }
-    }, [experts, navigateToProfile]);
+    }, [location.pathname, experts]);
 
-    // Scroll-to-top on view change
+    // NAVIGATION
+    const navigateToList = useCallback(() => {
+        setSelectedExpertId(null);
+        setSearchQuery('');
+        navigate('/');
+    }, [navigate]);
+
+    const navigateToProfile = useCallback((expertId: string, bookId?: string) => {
+        setSelectedExpertId(expertId);
+        const targetExpert = experts.find(e => e.id === expertId);
+        const slugOrId = targetExpert ? getExpertSlug(targetExpert, experts) : expertId;
+        if (bookId) {
+            navigate(`/profile/${slugOrId}/book/${bookId}`);
+        } else {
+            navigate(`/profile/${slugOrId}`);
+        }
+    }, [navigate, experts]);
+    
+    // Backward compatibility with legacy hash links (e.g. #/profile/:id)
+    useEffect(() => {
+        const hash = window.location.hash;
+        const profileMatch = hash.match(/^#\/profile\/(.+)$/);
+        if (profileMatch && profileMatch[1]) {
+            const identifier = profileMatch[1];
+            const matched = findExpertBySlugOrId(identifier, experts);
+            const slugOrId = matched ? getExpertSlug(matched, experts) : identifier;
+            navigate(`/profile/${slugOrId}`, { replace: true });
+        }
+    }, [navigate, experts]);
+
+    // Scroll-to-top on route change
     useEffect(() => {
         window.scrollTo(0, 0);
-    }, [view]);
-
+    }, [location.pathname]);
 
     const navigateToAdmin = useCallback(() => {
         if (currentUser?.role === UserRole.ADMIN) {
-            setView('admin');
+            navigate('/admin');
         }
-    }, [currentUser]);
+    }, [currentUser, navigate]);
 
     const navigateToTitleHive = useCallback(() => {
-        setView('title-hive');
-    }, []);
+        navigate('/titlehive');
+    }, [navigate]);
 
     const navigateToTerms = useCallback(() => {
-        setView('terms');
-    }, []);
+        navigate('/terms');
+    }, [navigate]);
 
     const navigateToPrivacy = useCallback(() => {
-        setView('privacy');
-    }, []);
+        navigate('/privacy');
+    }, [navigate]);
 
     const navigateToPremium = useCallback(() => {
-        setView('go-premium');
-    }, []);
+        navigate('/premium');
+    }, [navigate]);
 
 
     // USER & AUTHENTICATION
@@ -281,8 +321,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         await supabase.auth.signOut();
         // The onAuthStateChange listener handles state cleanup.
         setIsLoading(false);
-        setView('list');
-    }, []);
+        navigate('/');
+    }, [navigate]);
 
     // EXPERT DATA MANAGEMENT
     const addExpert = async (expertData: Omit<Expert, 'id' | 'createdAt' | 'updatedAt' | 'role' | 'status' | 'subscriptionTier' | 'books' | 'spotlights' | 'onLeave'>): Promise<boolean> => {
@@ -361,135 +401,130 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     const refreshCurrentUser = useCallback((updatedUser: Expert) => {
-        setExperts(prevExperts => {
-            const newExperts = prevExperts.map(e => e.id === updatedUser.id ? updatedUser : e);
-            return newExperts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        });
         setCurrentUser(updatedUser);
         safeSetSessionUser(updatedUser);
+        setExperts(prevExperts => {
+            const newExperts = prevExperts.map(e => e.id === updatedUser.id ? { ...e, ...updatedUser } : e);
+            return newExperts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        });
     }, [safeSetSessionUser]);
-    
-    const runAlertAgent = (updatedExpert: Expert, newBooks: Book[]) => {
-        if (newBooks.length === 0) return;
 
-        const premiumSearchers = experts.filter(
-            e => e.subscriptionTier === SubscriptionTier.PREMIUM &&
-                    e.bookQuery?.title &&
-                    e.bookQuery?.author &&
-                    e.id !== updatedExpert.id // Don't notify the seller
-        );
-
-        if (premiumSearchers.length === 0) return;
-
-        for (const newBook of newBooks) {
-            for (const searcher of premiumSearchers) {
-                const queryTitle = searcher.bookQuery!.title.toLowerCase();
-                const queryAuthor = searcher.bookQuery!.author.toLowerCase();
-                const bookTitle = newBook.title.toLowerCase();
-                const bookAuthor = newBook.author.toLowerCase();
-
-                if (bookTitle.includes(queryTitle) && bookAuthor.includes(queryAuthor)) {
-                    const profileUrl = `${window.location.origin}${window.location.pathname}#/profile/${updatedExpert.id}`;
-                    console.log(`--- 📧 TITLE HIVE ALERT ---`);
-                    console.log(`To: ${searcher.email}`);
-                    console.log(`Subject: A Book You're Searching For Is Now Available!`);
-                    console.log(`\nHello ${searcher.name},\n`);
-                    console.log(`Good news! A book matching your search query has just been listed by ${updatedExpert.name}.`);
-                    console.log(`\n--- Book Details ---`);
-                    console.log(`Title: ${newBook.title}`);
-                    console.log(`Author: ${newBook.author}`);
-                    console.log(`\nYou can view the expert's profile here: ${profileUrl}`);
-                    console.log(`-------------------------\n`);
-                }
+    const updateExpertBooks = async (expertId: string, books: Book[]): Promise<void> => {
+        setUpdatingExpertIds(prev => new Set(prev).add(expertId));
+        try {
+            await updateExpert(expertId, { books });
+            setExperts(prevExperts => {
+                const newExperts = prevExperts.map(e => e.id === expertId ? { ...e, books } : e);
+                return newExperts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            });
+            if (currentUser?.id === expertId) {
+                setCurrentUser(prev => prev ? { ...prev, books } : null);
             }
+        } catch (error) {
+            console.error("Failed to update expert books:", error);
+            alert(`Failed to update books: ${error instanceof Error ? error.message : "An unknown error occurred"}`);
+        } finally {
+            setUpdatingExpertIds(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(expertId);
+                return newSet;
+            });
         }
     };
 
-    const updateExpertBooks = async (expertId: string, books: Book[]) => {
-        const expertToUpdate = experts.find(e => e.id === expertId);
-        if (!expertToUpdate) return;
-
-        const oldBookIds = new Set((expertToUpdate.books || []).map(b => b.id));
-        const newBooks = books.filter(b => !oldBookIds.has(b.id) && b.status === BookStatus.AVAILABLE);
-
-        const success = await updateExpertProfile(expertId, { books });
-
-        // Run the alert agent after a successful database update.
-        if (success) {
-            const updatedExpert = experts.find(e => e.id === expertId);
-            if (updatedExpert) {
-                runAlertAgent(updatedExpert, newBooks);
+    const updateExpertStatus = async (expertId: string, status: UserStatus): Promise<void> => {
+        setUpdatingExpertIds(prev => new Set(prev).add(expertId));
+        try {
+            await updateExpert(expertId, { status });
+            setExperts(prevExperts => {
+                const newExperts = prevExperts.map(e => e.id === expertId ? { ...e, status } : e);
+                return newExperts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            });
+            if (currentUser?.id === expertId) {
+                setCurrentUser(prev => prev ? { ...prev, status } : null);
             }
+        } catch (error) {
+            console.error("Failed to update expert status:", error);
+            alert(`Failed to update status: ${error instanceof Error ? error.message : "An unknown error occurred"}`);
+        } finally {
+            setUpdatingExpertIds(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(expertId);
+                return newSet;
+            });
         }
     };
 
-    const updateExpertStatus = async (expertId: string, status: UserStatus) => {
-        await updateExpertProfile(expertId, { status });
-    };
-
-    const deleteMultipleExperts = async (expertIds: string[]) => {
-        if (expertIds.length === 0) return;
-
+    const deleteMultipleExperts = async (expertIds: string[]): Promise<void> => {
         setIsErasing(true);
         try {
             await apiDeleteMultipleExperts(expertIds);
-            setExperts(prev => prev.filter(e => !expertIds.includes(e.id)));
+            setExperts(prevExperts => prevExperts.filter(e => !expertIds.includes(e.id)));
+            if (currentUser && expertIds.includes(currentUser.id)) {
+                await logout();
+            }
         } catch (error) {
             console.error("Failed to delete experts:", error);
-            alert("An error occurred while deleting users.");
+            alert(`Failed to delete experts: ${error instanceof Error ? error.message : "An unknown error occurred"}`);
         } finally {
             setIsErasing(false);
         }
     };
-    
+
     // WISHLIST MANAGEMENT
-    useEffect(() => {
-        try {
-            localStorage.setItem('wishlist', JSON.stringify(wishlist));
-        } catch (e) {
-            console.warn('Failed to save wishlist to localStorage:', e);
-        }
-    }, [wishlist]);
+    const isBookInWishlist = (bookId: string): boolean => {
+        return wishlist.some(item => item.book.id === bookId);
+    };
 
-    const isBookInWishlist = useCallback((bookId: string) => {
-        return wishlist.some(item => item.bookId === bookId);
-    }, [wishlist]);
+    const addToWishlist = (item: WishlistItem) => {
+        setWishlist(prevWishlist => {
+            const updated = [...prevWishlist, item];
+            try {
+                localStorage.setItem('wishlist', JSON.stringify(updated));
+            } catch (e) {
+                console.warn('Failed to save wishlist to local storage:', e);
+            }
+            return updated;
+        });
+    };
 
-    const addToWishlist = useCallback((item: WishlistItem) => {
-        setWishlist(prev => [...prev, item]);
-    }, []);
+    const removeFromWishlist = (bookId: string) => {
+        setWishlist(prevWishlist => {
+            const updated = prevWishlist.filter(item => item.book.id !== bookId);
+            try {
+                localStorage.setItem('wishlist', JSON.stringify(updated));
+            } catch (e) {
+                console.warn('Failed to save wishlist to local storage:', e);
+            }
+            return updated;
+        });
+    };
 
-    const removeFromWishlist = useCallback((bookId: string) => {
-        setWishlist(prev => prev.filter(item => item.bookId !== bookId));
-    }, []);
-
-    // FILTERING
+    // FILTERED EXPERTS MEMO
     const filteredExperts = useMemo(() => {
         return experts.filter(expert => {
-            if (expert.role !== UserRole.EXPERT) return false;
-
+            if (expert.status !== UserStatus.ACTIVE) {
+                return false;
+            }
             const matchesGenre = !genreFilter || expert.genre === genreFilter;
             
-            const lowerCaseQuery = searchQuery.toLowerCase();
-            const matchesSearch = !lowerCaseQuery ||
-                expert.name.toLowerCase().includes(lowerCaseQuery) ||
-                expert.genre.toLowerCase().includes(lowerCaseQuery) ||
-                (expert.books || []).some(book => 
-                    (book.title || '').toLowerCase().includes(lowerCaseQuery) ||
-                    (book.author || '').toLowerCase().includes(lowerCaseQuery)
-                ) ||
-                (expert.bookQuery && (
-                    expert.bookQuery.title.toLowerCase().includes(lowerCaseQuery) ||
-                    expert.bookQuery.author.toLowerCase().includes(lowerCaseQuery)
-                ));
+            if (!searchQuery) {
+                return matchesGenre;
+            }
 
-            return matchesGenre && matchesSearch;
+            const query = searchQuery.toLowerCase();
+            const matchesName = expert.name.toLowerCase().includes(query);
+            const matchesLocation = expert.location ? expert.location.toLowerCase().includes(query) : false;
+            const matchesBooks = (expert.books || []).some(book => 
+                book.status === BookStatus.APPROVED &&
+                (book.title.toLowerCase().includes(query) || book.author.toLowerCase().includes(query))
+            );
+
+            return matchesGenre && (matchesName || matchesLocation || matchesBooks);
         });
     }, [experts, genreFilter, searchQuery]);
 
-
-    // CONTEXT VALUE
-    const contextValue: AppContextType = {
+    const contextValue = {
         experts,
         filteredExperts,
         currentUser,
