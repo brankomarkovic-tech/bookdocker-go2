@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../hooks/useAppContext';
+import { getExpertSlug, findExpertBySlugOrId } from '../utils/slug';
 import { BookStatus, Book, UserRole, BookQuery, SubscriptionTier, Spotlight } from '../types';
 import { BackIcon, EmailIcon, BookIcon, XIcon, FacebookIcon, LinkedInIcon, SearchIcon, HeartIcon, MapPinIcon, InstagramIcon, YouTubeIcon, OnLeaveIcon, BuzzIcon, SparklesIcon, PresentIcon } from './icons';
 import InquiryModal from './InquiryModal';
@@ -25,11 +27,29 @@ const ChevronRightIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 
 const ExpertProfile: React.FC = () => {
-  const { experts, selectedExpertId, navigateToList, isBookInWishlist, addToWishlist, removeFromWishlist, currentUser, navigateToPremium } = useAppContext();
+  const { experts, selectedExpertId, navigateToList, isBookInWishlist, addToWishlist, removeFromWishlist, currentUser, navigateToPremium, isLoading } = useAppContext();
+  const params = useParams<{ expertId?: string; bookId?: string }>();
+  const navigate = useNavigate();
+  const effectiveExpertId = params.expertId || selectedExpertId;
 
   const selectedExpert = useMemo(() => {
-    return experts.find(e => e.id === selectedExpertId);
-  }, [experts, selectedExpertId]);
+    return findExpertBySlugOrId(effectiveExpertId, experts);
+  }, [experts, effectiveExpertId]);
+
+  const expertSlug = useMemo(() => {
+    return selectedExpert ? getExpertSlug(selectedExpert, experts) : '';
+  }, [selectedExpert, experts]);
+
+  // Canonical slug redirect
+  useEffect(() => {
+    if (selectedExpert && expertSlug && params.expertId && params.expertId !== expertSlug) {
+      if (params.bookId) {
+        navigate(`/profile/${expertSlug}/book/${params.bookId}`, { replace: true });
+      } else {
+        navigate(`/profile/${expertSlug}`, { replace: true });
+      }
+    }
+  }, [selectedExpert, expertSlug, params.expertId, params.bookId, navigate]);
 
   const [currentSpotlightIndex, setCurrentSpotlightIndex] = useState(0);
   const [isContactFormOpen, setIsContactFormOpen] = useState(false);
