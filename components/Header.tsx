@@ -1,21 +1,18 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppContext } from '../hooks/useAppContext';
-import ProfileForm from './ProfileForm';
 import { UserRole, Expert, SubscriptionTier } from '../types';
 import { Logo } from './Logo';
 import WishlistModal from './WishlistModal';
 import { HeartIcon, HoneycombIcon, SparklesIcon } from './icons';
 import LoginModal from './LoginModal';
+import ProfileForm from './ProfileForm';
 
 const Header: React.FC = () => {
-  const { wishlist, currentUser, logout, navigateToList, navigateToAdmin, navigateToTitleHive, navigateToPremium } = useAppContext();
+  const { wishlist, currentUser, logout } = useAppContext();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  
-  const handleLogoClick = () => {
-      navigateToList();
-  }
 
   const getWelcomeName = (user: Expert | null): string => {
     if (!user) return '';
@@ -38,8 +35,8 @@ const Header: React.FC = () => {
     <>
       <header className="bg-white shadow-md sticky top-0 z-40">
         <div className="container mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
-          <button
-            onClick={handleLogoClick}
+          <Link
+            to="/"
             className="flex items-center gap-2 sm:gap-3 text-current no-underline"
             aria-label="Go to homepage"
           >
@@ -47,16 +44,16 @@ const Header: React.FC = () => {
             <span className="text-base sm:text-lg font-bold text-gray-800">
               BookDocker <span className="text-customBlue-600">GO2</span>
             </span>
-          </button>
+          </Link>
           <div className="flex items-center gap-3 sm:gap-4">
-            <button
-                onClick={navigateToTitleHive}
+            <Link
+                to="/titlehive"
                 className="relative text-gray-600 hover:text-customBlue-600 transition-colors"
                 title="Explore what experts are searching for"
                 aria-label="Explore the Title Hive"
             >
                 <HoneycombIcon className="w-7 h-7" />
-            </button>
+            </Link>
              <button
               onClick={() => setIsWishlistOpen(true)}
               className="relative text-gray-600 hover:text-customBlue-600 transition-colors"
@@ -76,21 +73,21 @@ const Header: React.FC = () => {
                       Welcome, {getWelcomeName(currentUser)}!
                   </span>
                   {currentUser.role === UserRole.ADMIN && (
-                    <button
-                        onClick={navigateToAdmin}
+                    <Link
+                        to="/admin"
                         className="font-semibold text-customBlue-600 hover:text-customBlue-700 transition-colors"
                     >
                         Admin Panel
-                    </button>
+                    </Link>
                   )}
                    {isFreeTierExpert && (
-                        <button
-                            onClick={navigateToPremium}
+                        <Link
+                            to="/premium"
                             className="flex items-center gap-2 bg-yellow-400 text-yellow-900 font-semibold py-2 px-4 rounded-lg hover:bg-yellow-500 transition duration-300"
                         >
                             <SparklesIcon className="w-5 h-5" />
                             Go Premium
-                        </button>
+                        </Link>
                     )}
                   <button
                       onClick={logout}
