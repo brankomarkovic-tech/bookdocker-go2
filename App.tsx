@@ -73,7 +73,7 @@ const AppManager: React.FC = () => {
                                 <Route path="/profile/:expertId/book/:bookId" element={<ExpertProfile />} />
                                 <Route path="/book/:bookId" element={<BookRedirectHandler />} />
                                 <Route path="/titlehive" element={<TitleHive />} />
-                                <Route path="/title-hive" element={<Navigate to="/titlehive" replace />} />
+                                <Route path="/title-hive" element={<TitleHive />} />
                                 <Route path="/hive" element={<Navigate to="/titlehive" replace />} />
                                 <Route path="/terms" element={<TermsAndConditions />} />
                                 <Route path="/privacy" element={<PrivacyPolicy />} />
