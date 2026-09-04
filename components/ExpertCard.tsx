@@ -22,35 +22,34 @@ const ExpertCard: React.FC<ExpertCardProps> = ({ expert }) => {
     >
         {isPremium && expert.onLeave && (
             <div className="absolute top-0 right-0 w-16 h-16" title="Expert is On Leave">
-                <div className="absolute w-full h-full bg-blue-600" style={{clipPath: 'polygon(0 0, 100% 0, 100% 100%)'}}></div>
-                <OnLeaveIcon className="absolute top-1 right-1 w-5 h-5 text-white" />
+                 <div className="absolute w-full h-full bg-green-500" style={{clipPath: 'polygon(100% 0, 0 0, 100% 100%)'}}></div>
+                <OnLeaveIcon className="absolute top-2 right-2 w-5 h-5 text-white" />
             </div>
         )}
-      <div className="p-6 flex-grow flex flex-col">
-        <div className="flex items-center space-x-4">
-          <img
-            className="w-16 h-16 rounded-full object-cover border-2 border-customBlue-500"
-            src={expert.avatarUrl}
-            alt={expert.name}
-          />
-          <div>
-            <div className="flex items-center space-x-1.5">
-              <h2 className="text-xl font-bold text-gray-900">{expert.name}</h2>
-              {isPremium && (
-                <span title="Premium Expert">
-                  <SparklesIcon className="w-5 h-5 text-yellow-500 flex-shrink-0" />
-                </span>
-              )}
+
+        {isPremium && expert.presentOffer && (
+            <div className="absolute top-0 left-0 w-16 h-16" title="Special Offer Available">
+                <div className="absolute w-full h-full" style={{backgroundColor: '#d10a4d', clipPath: 'polygon(0 0, 100% 0, 0 100%)'}}></div>
+                <PresentIcon className="absolute top-2 left-2 w-5 h-5 text-white" />
             </div>
-            <p className="text-sm font-semibold text-customBlue-600">{expert.genre}</p>
-             {expert.presentBookId && (
-                <div className="flex items-center gap-1 mt-1" title="Has a book on special offer">
-                    <PresentIcon className="w-4 h-4 text-[#d10a4d]" />
-                    <span className="text-xs font-semibold text-[#d10a4d]">Special Offer</span>
-                </div>
-            )}
-          </div>
+        )}
+
+      <div className="p-6 flex flex-col flex-grow items-center text-center pt-6">
+        <img className="w-24 h-24 rounded-full object-cover mb-4 shadow-md ring-4 ring-customBlue-100" src={expert.avatarUrl} alt={expert.name} />
+        <h3 className="text-xl font-bold text-gray-900">{expert.name}</h3>
+        <div className="mt-2">
+          <span className="inline-flex items-center gap-1.5 bg-customBlue-100 text-customBlue-800 text-sm font-semibold px-2.5 py-0.5 rounded-full">
+            {isPremium && <SparklesIcon className="w-4 h-4 text-yellow-500" />}
+            {expert.genre} GO2
+          </span>
         </div>
+
+        {expert.bookQuery?.title && (
+            <div className="mt-4 p-2 bg-[#d7fcea] rounded-md w-full" title={`Searching for: ${expert.bookQuery.title} by ${expert.bookQuery.author}`}>
+                 <p className="text-xs font-semibold text-green-900">Searching For:</p>
+                 <p className="text-xs text-gray-700 truncate">{expert.bookQuery.title}</p>
+            </div>
+        )}
 
         <p className="text-gray-600 mt-4 text-sm line-clamp-4 flex-grow">{expert.bio}</p>
       </div>
